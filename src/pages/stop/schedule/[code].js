@@ -62,7 +62,7 @@ export default function Home(data) {
                     <p>Even Busses need to sleep.</p>
                     <br />
                     <p>No busses are scheduled during this time</p>
-                    <button onClick={() => window.location.href = "/" + data.code}>Go Home?</button>
+                    <button onClick={() => window.location.href = "/"}>Go Home?</button>
                 </div>
             )
         } else {
