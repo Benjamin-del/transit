@@ -1,0 +1,10 @@
+{
+    "sto-config": {
+        "gtfs-rt":"https://gtfs.sto.ca/download.php?hash=3d6a51988f225b662e1bc4defafb0083fefbea02e01c26aad504b57164f1e93a&key=2BD0F96CA0C8CC677D6F642D65AEA22E",
+        "gtfs-sd":"http://www.contenu.sto.ca/GTFS/GTFS.zip"
+    },
+    "oct-config": {
+        "gtfs-rt":"https://api.octranspo1.com/gtfs-rt/vehiclePositions.pb",
+        "gtfs-sd":"http://www.octranspo1.com/files/google_transit.zip"
+    }
+}

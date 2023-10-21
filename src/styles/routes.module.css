@@ -1,0 +1,11 @@
+.route_spn {
+    background-color: #004777;
+    padding: 5px;
+    color: white;
+    border-radius: 10px;
+    margin-right: 10px;
+  }
+
+  .rt_inline {
+    display: inline;
+}

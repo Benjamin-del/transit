@@ -1,0 +1,54 @@
+.rt_hd {
+    text-align: left;
+
+}
+
+.arrv {
+    flex: none;
+    width: 100%;
+    padding: 10px;
+}
+
+.arrv_txt {
+display: inline;
+}
+
+.hed {
+    height: 15vh;
+    padding: 3vh
+}
+
+.arrv_par {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: scroll;
+    height: 80vh;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+    padding: 10px;
+}
+.hed_h1 {
+    height: auto;
+}
+.opt {
+    height: 5vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+    background: #ff7700;
+    padding: 10px;
+}
+
+.btn {
+    color: white;
+    border: 2px solid;
+    padding-inline: 10px;
+    border-radius: 10px;
+}
+
+.sched_err {
+    margin: 5vh;
+    padding: 10px;
+}
