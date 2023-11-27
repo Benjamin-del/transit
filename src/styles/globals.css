@@ -6,6 +6,9 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  --primary: #004777;
+  --secondary: #FF7700;
+  --text: white;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -68,12 +71,12 @@ body {
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-  background: #FF7700;
+  background: var(--primary);
   /*border-radius: 5px; */
 }
 
 h1 {    
-  height: 20%;
+  /*height: 20%;*/
   font-size: 2rem;
   /*padding-bottom: 5%;*/
   color: #FF7700;
@@ -86,4 +89,29 @@ input[type="time"]::-webkit-calendar-picker-indicator{
 input[type="time"] {
   background: none;
   color: white;
+}
+/* Agencies */
+
+.oc_colr_p {
+  color: #ED1B2E;
+}
+.oc_colr_s {
+  color: #2C2C2C;
+}
+
+.sto_colr_p {
+  color: #33A948;
+}
+.sto_colr_s {
+  color: #007F89;
+}
+.bg {
+  background-position: center center !important;
+}
+h3 {
+  text-align: center;
+}
+h2 {
+  font-size: 1.5rem;
+  color: #FF7700;
 }

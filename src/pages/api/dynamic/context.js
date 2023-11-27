@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const now = DateTime.now().setZone(zone)
     const gtfsdt = Number(now.toFormat('yyyyMMdd'))
     // Trasforming the current date to the format of yyyyMMdd, and converting to a number so I can do math with it and the dates
-    const list = await gtfs.download("calendar.txt", true)
+    const list = await gtfs.download("calendar.txt", "oct")
     function acceptabledate() {
         // Reusable function that returns an array of days that are acceptable
         // I HATE CSV/TXT FILES!!!
@@ -58,8 +58,8 @@ export default async function handler(req, res) {
     }
 
     async function getContext() {
-        const tps = await gtfs.download("trips.txt")
-        const tms = await gtfs.download("stop_times.txt")
+        const tps = await gtfs.download("trips.txt", "oct")
+        const tms = await gtfs.download("stop_times.txt", "oct")
 
         const accdays = acceptabledate()
         console.log("Acceptable days:", accdays)
@@ -98,7 +98,7 @@ export default async function handler(req, res) {
                 headsign: dts[3],
                 dir: dts[4],
                 shape: dts[5].replace("\r", ""),
-                gtfs: await route_helper.get(dts[0])
+                gtfs: await route_helper.get(dts[0], "oct")
             }
         }))
     }

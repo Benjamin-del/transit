@@ -1,9 +1,9 @@
 import gtfs_static from "./fetch_gtfs"
 
 export default {
-    async get(routeId) {
+    async get(routeId,ag) {
 
-        const oc_routes = await gtfs_static.download("routes.txt")
+        const oc_routes = await gtfs_static.download("routes.txt", ag)
         try {
             return oc_routes.filter((x) => {
                 console

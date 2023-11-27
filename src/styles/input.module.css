@@ -1,6 +1,18 @@
 .src {
-    width: 80%;
+    width: 95%;
     background: none;
     border: 0px;
     border-bottom: 1px solid #004777;
+}
+.select {
+    width: 30%;
+    background: none;
+    color: #004777;
+    padding-bottom: 1px;
+    border-bottom: 1px solid;
+    flex: none;
+}
+
+.ipt_flex {
+    display: flex;
 }

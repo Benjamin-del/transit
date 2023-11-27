@@ -1,9 +1,10 @@
 .route_spn {
-    background-color: #004777;
+    background-color: var(--primary);
     padding: 5px;
-    color: white;
+    color: var(--text);
     border-radius: 10px;
     margin-right: 10px;
+    font-weight: 700;
   }
 
   .rt_inline {

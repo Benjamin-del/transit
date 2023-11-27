@@ -1,60 +1,277 @@
-import Image from 'next/image'
-import ipt from "../styles/input.module.css";
-export default function Home({ stops }) {
+import React, { useRef, useEffect, useState, updateState } from 'react';
+import mapboxgl from 'mapbox-gl';
+import map_css from '../styles/map.module.css'
+import 'mapbox-gl/dist/mapbox-gl.css';
+import Head from 'next/head';
+import 'material-icons/iconfont/material-icons.css'
 
-  function stop_res() {
-    const query = document.getElementById("stp_query")
-    const res = document.getElementById("stop_res")
-    const dt = stops.stops
-    console.log(dt)
+mapboxgl.accessToken =
+    'pk.eyJ1IjoiYmVuamFtaW5tYWhlcmFsIiwiYSI6ImNrbGJnOW5hdzByMTcycHRrYW81cTRtaDMifQ.xowWxUTgoDkvBMmkE18BiQ';
 
-    if (query.value === "" || query.length < 3) {
-      console.log("Not enough Information")
-      res.innerHTML = "<p>Enter more Information</p>"
-      return
-    } else {
-      res.innerHTML = ""
-      dt.filter((x) => {
-        return x.stop_name.toUpperCase().includes(query.value.toUpperCase())
-      }).forEach((x) => {
-        const span = document.createElement("span")
-        span.setAttribute("class", "span-stop-code")
-        span.textContent = x.stop_code
+export default function Home() {
+    const mapContainerRef = useRef(null);
 
-        const p = document.createElement("p")
-        p.innerHTML = x.stop_name
-        p.setAttribute("class", "text-inl")
+    /*const [lng, setLng] = useState(5);
+    const [lat, setLat] = useState(34);
+    const [zoom, setZoom] = useState(1.5);*/
 
-        const div = document.createElement("a")
-        div.setAttribute("class", "flex flex-row items-center w-full")
-        div.setAttribute("href", "/stop/" + x.stop_id)
-        div.appendChild(span)
-        div.appendChild(p)
+    const [agency, setAgency] = useState()
+    const [stop, setStop] = useState()
+    const [data, setData] = useState("none")
+    // Initialize map when component mounts
+    useEffect(() => {
+        const map = new mapboxgl.Map({
+            container: mapContainerRef.current,
+            style: 'mapbox://styles/mapbox/satellite-streets-v12',
+            center: [-75.70893955298494, 45.34824731651693],
+            zoom: 10,
+            hash: true,
+        });
 
-        res.appendChild(div)
-      })
+        // Add navigation control (the +/- zoom buttons)
+        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        map.on('load', () => {
+            map.addSource('all_stops', {
+                type: 'geojson',
+                // Point to GeoJSON data. This example visualizes all M1.0+ earthquakes
+                // from 12/22/15 to 1/21/16 as logged by USGS' Earthquake hazards program.
+                data: '/api/geo/all_stops',
+                cluster: true,
+                clusterMaxZoom: 14, // Max zoom to cluster points on
+                clusterRadius: 50 // Radius of each cluster when clustering points (defaults to 50)
+            });
 
+            map.addLayer({
+                id: 'clusters',
+                type: 'circle',
+                source: 'all_stops',
+                filter: ['has', 'point_count'],
+
+                paint: {
+                    // Use step expressions (https://docs.mapbox.com/style-spec/reference/expressions/#step)
+                    // with three steps to implement three types of circles:
+                    //   * Blue, 20px circles when point count is less than 100
+                    //   * Yellow, 30px circles when point count is between 100 and 750
+                    //   * Pink, 40px circles when point count is greater than or equal to 750
+                    'circle-color': [
+                        'step',
+                        ['get', 'point_count'],
+                        '#ffffff',
+                        100,
+                        '#004777',
+                        750,
+                        '#ff7700'
+                    ],
+                    'circle-radius': [
+                        'step',
+                        ['get', 'point_count'],
+                        20,
+                        100,
+                        30,
+                        750,
+                        40
+                    ]
+                }
+            });
+
+            map.addLayer({
+                id: 'cluster-count',
+                type: 'symbol',
+                source: 'all_stops',
+                filter: ['has', 'point_count'],
+                layout: {
+                    'text-field': ['get', 'point_count_abbreviated'],
+                    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                    'text-size': 12
+                }
+            });
+
+            map.addLayer({
+                id: 'unclustered-point',
+                type: 'circle',
+                source: 'all_stops',
+                filter: ['!', ['has', 'point_count']],
+                paint: {
+                    'circle-radius': 6,
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#fff',
+                    'circle-color': [
+                        'match',
+                        ['get', 'agency'],
+                        'oct',
+                        '#ff0000',
+                        'sto',
+                        '#007F88',
+                        'via',
+                        '#FFCC00',
+                      /* other */ '#ccc'
+                    ]
+
+                }
+            });
+            map.addLayer({
+                id: "stop_labels",
+                type: "symbol",
+                source: "all_stops",
+                layout: {
+                    "symbol-placement": "point",
+                    "text-offset": [0, 2],
+                    "text-font": ["Open Sans Regular"],
+                    "text-field": '{stop_name}',
+                    "text-size": 12,
+                }, "paint": {
+                    "text-color": [
+                        'match',
+                        ['get', 'agency'],
+                        'oct',
+                        '#ff0000',
+                        'sto',
+                        '#007F88',
+                        'via',
+                        '#FFCC00',
+                      /* other */ '#ccc'
+                    ],
+                    "text-halo-color": "#fff",
+                    "text-halo-width": 2
+                }
+
+            })
+            map.on('click', 'clusters', (e) => {
+                const features = map.queryRenderedFeatures(e.point, {
+                    layers: ['clusters']
+                });
+                const clusterId = features[0].properties.cluster_id;
+                map.getSource('all_stops').getClusterExpansionZoom(
+                    clusterId,
+                    (err, zoom) => {
+                        if (err) return;
+
+                        map.easeTo({
+                            center: features[0].geometry.coordinates,
+                            zoom: zoom
+                        });
+                    }
+                );
+            });
+
+            // When a click event occurs on a feature in
+            // the unclustered-point layer, open a popup at
+            // the location of the feature, with
+            // description HTML from its properties.
+            map.on('click', 'unclustered-point', (e) => {
+                const coordinates = e.features[0].geometry.coordinates.slice();
+                setData("loading")
+                setAgency(e.features[0].properties.agency)
+                setStop(e.features[0].properties.stop_id)
+
+                //forceUpdate()
+                // Ensure that if the map is zoomed out such that
+                // multiple copies of the feature are visible, the
+                // popup appears over the copy being pointed to.
+                while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                }
+                //updateData(e.features[0].properties.agency,e.features[0].properties.stop_id)
+                /*new mapboxgl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML((function () {
+                        if (e.features[0].properties.agency === "oct") {
+                            return `
+                            <div>
+                                <h3>${e.features[0].properties.stop_name}</h3>
+                                <p>OC Transpo</p>
+                                <button>Schedule</button>
+                                <button>Realtime</button>
+                            </div>`
+                        } else if (e.features[0].properties.agency === "sto") {
+                            return `
+                            <div>
+                                <h3>${e.features[0].properties.stop_name}</h3>
+                                <p>STO</p>
+                                <button>Schedule</button>
+                                <button>Realtime</button>
+                            </div>`
+                        }
+                    })())
+                    .addTo(map);*/
+            });
+
+            map.on('mouseenter', 'clusters', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+            map.on('mouseleave', 'clusters', () => {
+                map.getCanvas().style.cursor = '';
+            });
+        });
+
+        // Clean up on unmount
+        return () => map.remove();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        if (!agency || !stop) return
+        console.log("agency", agency)
+        fetch("/api/gtfs/schedule/" + agency + "?stop=" + stop)
+            .then((response) => response.json())
+            .then((data) => {
+                console.log("data", data)
+                setData(data)
+            })
+    }, [agency, stop]);
+    function parseData(data) {
+        if (data === "loading") {
+            return <div className={map_css.loading}>
+                <p>Loading...</p>
+            </div>
+
+        } else if (data === "none") {
+            return <div className={map_css.loading}>
+                <p>Click a stop to see the schedule</p>
+            </div>
+        } else if (data) {
+            const schedulemap = (function () {
+                if (data.schedule.length === 0) {
+                    return <div className={map_css.error}>
+                        <span className="material-icons-outlined" style={{ fontSize: "10vh" }}>bus_alert</span>
+                        <p>No Scheduled Arrivals</p>
+                    </div>
+                } else {
+                    return data.schedule.map((schedule) => {
+                        return <div className={map_css.arrv_elem} key={schedule.trip_id}>
+                            <span>{schedule.route}</span><p>{schedule.trip_headsign}</p>
+                            <p>{schedule.attribute} {schedule.arrv}</p>
+                        </div>
+                    })
+                }
+            })()
+            return <div className={map_css.arrv_parent}>
+                <div className={map_css.heading_child}>
+                    <h3 classname={map_css.header}>{data.stop.stop_name}</h3><p>|</p><a href={"/api/agRedir?ag=" + agency + "&stop=" + stop}>View Realtime</a>
+                </div>
+                <div className={map_css.arrv_scroll}>{schedulemap}
+                </div>
+            </div>
+        }
     }
-  }
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <h1>Benja Transit3</h1>
-      <p>Realtime Transit Updates in Ottawa, Canada</p>
-      <input id="stp_query" placeholder='Search for Stops' className={ipt.src} onKeyDown={() => stop_res()}></input>
-      <div id="stop_res" className="stop-res-def">
-      </div>
-    </main>
-  )
-}
-
-export async function getServerSideProps() {
-  // Fetch data from external API
-
-  const url = process.env.URL
-
-  const res = await fetch(url + "/api/gtfs/stops")
-  const stops = await res.json()
-
-  // Pass data to the page via props
-  return { props: { stops } }
-}
+    return (
+        <div>
+            <Head>
+                <title>TransiTrack | NCR Public Transit Tracker</title>
+            </Head>
+            <div>
+                <div className={map_css.main_content}>
+                    <div className={map_css.sidebar}>
+                        <div className={map_css.sidebar_header}>
+                            <h1>TransiTrack</h1>
+                            <p>NCR Public Transit Tracker</p>
+                            <h2>Scheduled Arrivals</h2>
+                        </div>
+                        <div>
+                            {parseData(data)}
+                        </div>
+                    </div>
+                    <div className={map_css.map_container} ref={mapContainerRef} />
+                </div>
+            </div>
+        </div>
+    );
+};

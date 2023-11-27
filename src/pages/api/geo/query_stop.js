@@ -7,6 +7,7 @@ export const config = {
 export default async function handler(req,res) {
     const params = new URL(req.url).searchParams
     const id = params.get("id")
+    const agency = params.get("agency")
     if (!id) {
         return new Response(JSON.stringify({ error: "Missing required parameters" }), {
             status: 400,
@@ -15,7 +16,7 @@ export default async function handler(req,res) {
             },
         });
     }
-    const stop = await stop_helper.get(id)
+    const stop = await stop_helper.get(id, agency)
     if (!stop) {
         return new Response(JSON.stringify({ error: "No stop found" }), {
             status: 404,

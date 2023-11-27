@@ -1,8 +1,8 @@
 import gtfs_static from "./fetch_gtfs"
 
 export default {
-    async get(stopId) {
-        const oc_stops = await gtfs_static.download("stops.txt")
+    async get(stopId, ag) {
+        const oc_stops = await gtfs_static.download("stops.txt", ag)
         return oc_stops.filter((x) => {
             return x.split(",")[0] === stopId
         }).map((x) => {
@@ -17,7 +17,7 @@ export default {
         })[0]
     },
     async byCode(stopCode) {
-        const oc_stops = await gtfs_static.download("stops.txt")
+        const oc_stops = await gtfs_static.download("stops.txt", "oct")
         return oc_stops.split("\n").filter((x) => {
             return x.split(",")[1] === stopCode
         }).map((x) => {
