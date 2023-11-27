@@ -156,29 +156,6 @@ export default function Home() {
                 while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
                     coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
                 }
-                //updateData(e.features[0].properties.agency,e.features[0].properties.stop_id)
-                /*new mapboxgl.Popup()
-                    .setLngLat(coordinates)
-                    .setHTML((function () {
-                        if (e.features[0].properties.agency === "oct") {
-                            return `
-                            <div>
-                                <h3>${e.features[0].properties.stop_name}</h3>
-                                <p>OC Transpo</p>
-                                <button>Schedule</button>
-                                <button>Realtime</button>
-                            </div>`
-                        } else if (e.features[0].properties.agency === "sto") {
-                            return `
-                            <div>
-                                <h3>${e.features[0].properties.stop_name}</h3>
-                                <p>STO</p>
-                                <button>Schedule</button>
-                                <button>Realtime</button>
-                            </div>`
-                        }
-                    })())
-                    .addTo(map);*/
             });
 
             map.on('mouseenter', 'clusters', () => {
@@ -253,13 +230,13 @@ export default function Home() {
     return (
         <div>
             <Head>
-                <title>TransiTrack | NCR Public Transit Tracker</title>
+                <title>Benja Transit | NCR Public Transit Tracker</title>
             </Head>
             <div>
                 <div className={map_css.main_content}>
                     <div className={map_css.sidebar}>
                         <div className={map_css.sidebar_header}>
-                            <h1>TransiTrack</h1>
+                            <h1>Benja Transit</h1>
                             <p>NCR Public Transit Tracker</p>
                         </div>
                         <div>

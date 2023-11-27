@@ -16,6 +16,7 @@
   overflow-x: scroll;
   height: 80vh;
 }
+
 .loading {
   height: 23vh;
   text-align: center;
@@ -28,6 +29,7 @@
   padding-inline: 10px;
   flex-direction: column;
 }
+
 .arrv_elem {
   display: flex;
   justify-content: flex-start;
@@ -50,11 +52,20 @@
 }
 
 .sidebar_header {
-    height: 10vh;
-    background: white;
-    text-align: center;
-    border-bottom: 1px solid #004777;
-  }
+  height: 10vh;
+  background: white;
+  text-align: center;
+  /*border-bottom: 1px solid #004777;*/
+}
+
+.marker {
+  color: #004777;
+}
+
+.arrv_scroll_5 {
+  overflow-x: scroll;
+  height: 85vh;
+}
 
 .button {
   background: #004777;
@@ -80,6 +91,7 @@
   border-radius: 10px;
   color: #FF7700;
 }
+
 .no_content {
   height: 90vh;
   display: flex;
@@ -87,8 +99,10 @@
   justify-content: center;
   text-align: center;
   flex-direction: column;
-  color:   #FF7700;;
+  color: #FF7700;
+  ;
 }
+
 .no_content_child {
   display: flex;
   height: 100%;
@@ -98,9 +112,11 @@
   justify-content: center;
   align-items: center;
   text-align: center;
-  color:   #FF7700;;
+  color: #FF7700;
+  ;
 
 }
+
 @media screen and (max-width: 768px) {
   .main_content {
     display: flex;
@@ -111,38 +127,52 @@
     width: 100%;
     height: 62vh;
   }
+
   .sidebar {
     width: 100%;
   }
+
   .arrv_scroll {
     height: 20vh;
     display: flex;
     flex-direction: row;
-    justify-content: center;
     color: #FF7700;
-      }
+  }
+
+  .arrv_scroll_5 {
+    height: 25vh;
+    display: flex;
+    flex-direction: row;
+  }
+
   .arrv_parent {
     height: 23vh;
   }
+
   .sidebar_header {
     height: 9vh;
     text-align: center;
   }
+
   .arrv_elem {
     display: flex;
     justify-content: flex-start;
     gap: 1vh;
-    align-items: center;
+    align-items: flex-start;
     flex-direction: row;
     flex-wrap: wrap;
     margin: 1vh;
-    background: white;
-    padding: 0.5vh;
     border-radius: 1vh;
-    }
+    width: 25vh;
+    flex: none;
+    background: #efefef;
+    padding: 1vh;
+   }
+
   .error {
     width: 100%;
   }
+
   .no_content {
     height: 25vh;
     display: flex;
