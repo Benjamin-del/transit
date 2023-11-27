@@ -5,6 +5,7 @@
 
 .sidebar {
   width: 30%;
+  background: white;
 }
 
 .main_content {
@@ -24,6 +25,8 @@
   display: flex;
   justify-content: center;
   gap: 10px;
+  padding-inline: 10px;
+  flex-direction: column;
 }
 .arrv_elem {
   display: flex;
@@ -33,7 +36,10 @@
   flex-direction: row;
   flex-wrap: wrap;
   margin: 1vh;
-  /*border-bottom: 1px solid #004777;*/
+  /* border-bottom: 1px solid #004777; */
+  background: #efefef;
+  padding: 0.5vh;
+  border-radius: 1vh;
 }
 
 .arrv_elem span {
@@ -44,9 +50,11 @@
 }
 
 .sidebar_header {
-  height: 15vh;
-  text-align: center;
-}
+    height: 10vh;
+    background: white;
+    text-align: center;
+    border-bottom: 1px solid #004777;
+  }
 
 .button {
   background: #004777;
@@ -56,6 +64,7 @@
   width: 95%;
   border-radius: 1vh;
   border: none;
+  text-align: center;
 }
 
 .error {
@@ -71,7 +80,27 @@
   border-radius: 10px;
   color: #FF7700;
 }
+.no_content {
+  height: 90vh;
+  display: flex;
+  align-content: center;
+  justify-content: center;
+  text-align: center;
+  flex-direction: column;
+  color:   #FF7700;;
+}
+.no_content_child {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-content: center;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color:   #FF7700;;
 
+}
 @media screen and (max-width: 768px) {
   .main_content {
     display: flex;
@@ -88,22 +117,37 @@
   .arrv_scroll {
     height: 20vh;
     display: flex;
-    }
+    flex-direction: row;
+    justify-content: center;
+    color: #FF7700;
+      }
   .arrv_parent {
     height: 23vh;
   }
   .sidebar_header {
-    height: 15vh;
+    height: 9vh;
     text-align: center;
   }
   .arrv_elem {
-    width: 20vh;
-    flex: none;
     display: flex;
-    align-content: flex-start;
-    border-bottom: 0px;
-  }
+    justify-content: flex-start;
+    gap: 1vh;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin: 1vh;
+    background: white;
+    padding: 0.5vh;
+    border-radius: 1vh;
+    }
   .error {
     width: 100%;
+  }
+  .no_content {
+    height: 25vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    color: #FF7700;
   }
 }

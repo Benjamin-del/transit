@@ -22,15 +22,20 @@ export default function Home() {
     useEffect(() => {
         const map = new mapboxgl.Map({
             container: mapContainerRef.current,
-            style: 'mapbox://styles/mapbox/satellite-streets-v12',
+            style: 'mapbox://styles/benjaminmaheral/clph1gexw008k01p8bwryhgd2',
             center: [-75.70893955298494, 45.34824731651693],
             zoom: 10,
             hash: true,
-        });
-
+        });        
         // Add navigation control (the +/- zoom buttons)
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
         map.on('load', () => {
+            map.loadImage('/images/bus.png', (error, image) => {
+                if (error) throw error;
+                // Add the loaded image to the style's sprite with the ID 'kitten'.
+                map.addImage('bus', image);
+            });
+
             map.addSource('all_stops', {
                 type: 'geojson',
                 // Point to GeoJSON data. This example visualizes all M1.0+ earthquakes
@@ -86,27 +91,17 @@ export default function Home() {
                 }
             });
 
+            // Use bus icon for bus stops
             map.addLayer({
-                id: 'unclustered-point',
-                type: 'circle',
+                id: 'bus_stop',
+                type: 'symbol',
                 source: 'all_stops',
                 filter: ['!', ['has', 'point_count']],
-                paint: {
-                    'circle-radius': 6,
-                    'circle-stroke-width': 2,
-                    'circle-stroke-color': '#fff',
-                    'circle-color': [
-                        'match',
-                        ['get', 'agency'],
-                        'oct',
-                        '#ff0000',
-                        'sto',
-                        '#007F88',
-                        'via',
-                        '#FFCC00',
-                      /* other */ '#ccc'
-                    ]
-
+                layout: {
+                    'icon-image': 'bus',
+                    'icon-size': 0.2,
+                    'icon-allow-overlap': true,
+                    'icon-ignore-placement': true
                 }
             });
             map.addLayer({
@@ -115,22 +110,12 @@ export default function Home() {
                 source: "all_stops",
                 layout: {
                     "symbol-placement": "point",
-                    "text-offset": [0, 2],
+                    "text-offset": [0, 2.5],
                     "text-font": ["Open Sans Regular"],
                     "text-field": '{stop_name}',
                     "text-size": 12,
                 }, "paint": {
-                    "text-color": [
-                        'match',
-                        ['get', 'agency'],
-                        'oct',
-                        '#ff0000',
-                        'sto',
-                        '#007F88',
-                        'via',
-                        '#FFCC00',
-                      /* other */ '#ccc'
-                    ],
+                    "text-color": "#FF7700",
                     "text-halo-color": "#fff",
                     "text-halo-width": 2
                 }
@@ -158,7 +143,7 @@ export default function Home() {
             // the unclustered-point layer, open a popup at
             // the location of the feature, with
             // description HTML from its properties.
-            map.on('click', 'unclustered-point', (e) => {
+            map.on('click', 'bus_stop', (e) => {
                 const coordinates = e.features[0].geometry.coordinates.slice();
                 setData("loading")
                 setAgency(e.features[0].properties.agency)
@@ -219,20 +204,26 @@ export default function Home() {
     }, [agency, stop]);
     function parseData(data) {
         if (data === "loading") {
-            return <div className={map_css.loading}>
+            return <div className={map_css.no_content}>
+                <span className="material-icons-outlined" style={{ fontSize: "10vh" }}>pending</span>
                 <p>Loading...</p>
             </div>
 
         } else if (data === "none") {
-            return <div className={map_css.loading}>
-                <p>Click a stop to see the schedule</p>
+            return <div className={map_css.no_content}>
+                <div>
+                    <span className="material-icons-outlined" style={{ fontSize: "10vh" }}>departure_board</span>
+                    <p>Click a stop to see the schedule</p>
+                </div>
             </div>
         } else if (data) {
             const schedulemap = (function () {
                 if (data.schedule.length === 0) {
-                    return <div className={map_css.error}>
-                        <span className="material-icons-outlined" style={{ fontSize: "10vh" }}>bus_alert</span>
-                        <p>No Scheduled Arrivals</p>
+                    return <div className={map_css.no_content_child}>
+                        <div>
+                            <span className="material-icons-outlined" style={{ fontSize: "10vh" }}>bus_alert</span>
+                            <p>No Departures</p>
+                        </div>
                     </div>
                 } else {
                     return data.schedule.map((schedule) => {
@@ -245,7 +236,14 @@ export default function Home() {
             })()
             return <div className={map_css.arrv_parent}>
                 <div className={map_css.heading_child}>
-                    <h3 classname={map_css.header}>{data.stop.stop_name}</h3><p>|</p><a href={"/api/agRedir?ag=" + agency + "&stop=" + stop}>View Realtime</a>
+                    <h3 className={map_css.header}>{data.stop.stop_name}</h3>
+                    {(function () {
+                        if (data.schedule.length !== 0) {
+                            return <a className={map_css.button} href={"/api/agRedir?ag=" + agency + "&stop=" + stop}>View Realtime</a>
+                        } else {
+                            return <a className={map_css.button} href={"/schedule/" + agency.replace("oct", "octranspo") + "/" + stop}>View Schedule</a>
+                        }
+                    })()}
                 </div>
                 <div className={map_css.arrv_scroll}>{schedulemap}
                 </div>
@@ -263,7 +261,6 @@ export default function Home() {
                         <div className={map_css.sidebar_header}>
                             <h1>TransiTrack</h1>
                             <p>NCR Public Transit Tracker</p>
-                            <h2>Scheduled Arrivals</h2>
                         </div>
                         <div>
                             {parseData(data)}
