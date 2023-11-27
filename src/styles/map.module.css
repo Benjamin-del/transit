@@ -33,7 +33,7 @@
   flex-direction: row;
   flex-wrap: wrap;
   margin: 1vh;
-  border-bottom: 1px solid #004777;
+  /*border-bottom: 1px solid #004777;*/
 }
 
 .arrv_elem span {
