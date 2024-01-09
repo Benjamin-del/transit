@@ -8,7 +8,8 @@ import gtfs from "../../../../helpers/fetch_gtfs"
 export default async function handler(req,res) {
     const params = new URL(req.url).searchParams   
         const agencies = APIconfig.gtfs_st
-        console.log(agencies)
+        console.log("GEO/ALL_STOPS:")
+        
         const stops = await Promise.all(agencies.map(async (x) => {
             const stops = await gtfs.download("stops.txt", x)
             const mp = stops.filter((y) => {

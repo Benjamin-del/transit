@@ -4,9 +4,7 @@ import route_css from "../../styles/routes.module.css"
 import schedule_css from "../../styles/schedule.module.css"
 import 'material-icons/iconfont/material-icons.css'
 import config from "../../../config.json"
-const gtfs_rt = config.gtfs_rt
-import dynamic from 'next/dynamic'
- 
+const gtfs_rt = config.gtfs_rt 
 
 export default function Home(data) {
     //console.log("data", data)
@@ -126,22 +124,14 @@ export default function Home(data) {
                 return x.trip_id
             }).join(","))
             //console.log(rtqr)
-            return (<div className={schedule_css.realtime_msg}><span className="material-icons-outlined">departure_board</span><p>Last updated at: {htmltime}</p><p>|</p><button onClick={() => window.location.href = "/geo/" + data.agency + "/" + rtqr + "?stop=" + data.schedule.stop.stop_code}>View GPS</button><button onClick={() => window.location.href = "?realtime=false"}>View Schedule</button></div>)
+            return (<div className={schedule_css.realtime_msg}><span className="material-icons-outlined">departure_board</span><p>Last updated at: {htmltime}</p><p>|</p><button onClick={() => window.location.href = "?realtime=false"}>View Schedule</button></div>)
         } else if (data.schedule.query.realtime_support) {
             return <div className={schedule_css.realtime_msg}><input type="time" id="gtfshr" onChange={() => updateTime()} defaultValue={htmltime} /><button onClick={() => window.location.href = "?realtime=true"}>View Updates</button></div>
         } else {
             return (<div className={schedule_css.realtime_msg}><input type="time" id="gtfshr" onChange={() => updateTime()} defaultValue={htmltime} /><p>Updates Unavailable</p></div>)
         }
     }
-    function rt() {
-        const sql = data.schedule.schedule.map((x) => {
-            return {
-                id: x.trip_id,
-                arrv: x.arrv
-            }
-        })
-        window.localStorage.setItem("cached_sql", JSON.stringify(sql))
-    }
+  
     function onload() {
         if (process.browser) {
             const r = document.querySelector(":root")

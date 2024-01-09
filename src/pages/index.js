@@ -4,170 +4,119 @@ import map_css from '../styles/map.module.css'
 import 'mapbox-gl/dist/mapbox-gl.css';
 import Head from 'next/head';
 import 'material-icons/iconfont/material-icons.css'
+import { useRouter } from 'next/router'
+import { DateTime } from 'luxon';
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_KEY;
 
-mapboxgl.accessToken =
-    'pk.eyJ1IjoiYmVuamFtaW5tYWhlcmFsIiwiYSI6ImNrbGJnOW5hdzByMTcycHRrYW81cTRtaDMifQ.xowWxUTgoDkvBMmkE18BiQ';
-
-export default function Home() {
+export default function Home({ update }) {
+    const day = DateTime.fromISO(update)
     const mapContainerRef = useRef(null);
+    const map = useRef();
+    // Copilot: React router get paramaters
 
+    const router = useRouter();
     /*const [lng, setLng] = useState(5);
     const [lat, setLat] = useState(34);
     const [zoom, setZoom] = useState(1.5);*/
 
     const [agency, setAgency] = useState()
     const [stop, setStop] = useState()
-    const [data, setData] = useState("none")
+    const [data, setData] = useState({ data: null, type: null })
+    const [marker, setMarker] = useState(null)
+    
+    // Create Control for custom button
+    class MapboxGLButtonControl {
+        constructor({
+            className = "",
+            title = "",
+            eventHandler = evtHndlr
+        }) {
+            this._className = className;
+            this._title = title;
+            this._eventHandler = eventHandler;
+        }
+
+        onAdd(map) {
+            this._btn = document.createElement("button");
+            this._btn.className = "mapboxgl-ctrl-icon" + " " + this._className;
+            this._btn.type = "button";
+            this._btn.title = this._title;
+            this._btn.onclick = this._eventHandler;
+
+            this._container = document.createElement("div");
+            this._container.className = "mapboxgl-ctrl-group mapboxgl-ctrl";
+            this._container.appendChild(this._btn);
+
+            return this._container;
+        }
+
+        onRemove() {
+            this._container.parentNode.removeChild(this._container);
+            this._map = undefined;
+        }
+    }
+
     // Initialize map when component mounts
     useEffect(() => {
-        const map = new mapboxgl.Map({
+        map.current = new mapboxgl.Map({
             container: mapContainerRef.current,
-            style: 'mapbox://styles/benjaminmaheral/clph1gexw008k01p8bwryhgd2',
+            style: "mapbox://styles/mapbox/standard",
             center: [-75.70893955298494, 45.34824731651693],
             zoom: 10,
-            hash: true,
-        });        
-        // Add navigation control (the +/- zoom buttons)
-        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-        map.on('load', () => {
-            map.loadImage('/images/bus.png', (error, image) => {
-                if (error) throw error;
-                // Add the loaded image to the style's sprite with the ID 'kitten'.
-                map.addImage('bus', image);
-            });
-
-            map.addSource('all_stops', {
-                type: 'geojson',
-                // Point to GeoJSON data. This example visualizes all M1.0+ earthquakes
-                // from 12/22/15 to 1/21/16 as logged by USGS' Earthquake hazards program.
-                data: '/api/geo/all_stops',
-                cluster: true,
-                clusterMaxZoom: 14, // Max zoom to cluster points on
-                clusterRadius: 50 // Radius of each cluster when clustering points (defaults to 50)
-            });
-
-            map.addLayer({
-                id: 'clusters',
-                type: 'circle',
-                source: 'all_stops',
-                filter: ['has', 'point_count'],
-
-                paint: {
-                    // Use step expressions (https://docs.mapbox.com/style-spec/reference/expressions/#step)
-                    // with three steps to implement three types of circles:
-                    //   * Blue, 20px circles when point count is less than 100
-                    //   * Yellow, 30px circles when point count is between 100 and 750
-                    //   * Pink, 40px circles when point count is greater than or equal to 750
-                    'circle-color': [
-                        'step',
-                        ['get', 'point_count'],
-                        '#ffffff',
-                        100,
-                        '#004777',
-                        750,
-                        '#ff7700'
-                    ],
-                    'circle-radius': [
-                        'step',
-                        ['get', 'point_count'],
-                        20,
-                        100,
-                        30,
-                        750,
-                        40
-                    ]
-                }
-            });
-
-            map.addLayer({
-                id: 'cluster-count',
-                type: 'symbol',
-                source: 'all_stops',
-                filter: ['has', 'point_count'],
-                layout: {
-                    'text-field': ['get', 'point_count_abbreviated'],
-                    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-                    'text-size': 12
-                }
-            });
-
-            // Use bus icon for bus stops
-            map.addLayer({
-                id: 'bus_stop',
-                type: 'symbol',
-                source: 'all_stops',
-                filter: ['!', ['has', 'point_count']],
-                layout: {
-                    'icon-image': 'bus',
-                    'icon-size': 0.2,
-                    'icon-allow-overlap': true,
-                    'icon-ignore-placement': true
-                }
-            });
-            map.addLayer({
-                id: "stop_labels",
-                type: "symbol",
-                source: "all_stops",
-                layout: {
-                    "symbol-placement": "point",
-                    "text-offset": [0, 2.5],
-                    "text-font": ["Open Sans Regular"],
-                    "text-field": '{stop_name}',
-                    "text-size": 12,
-                }, "paint": {
-                    "text-color": "#FF7700",
-                    "text-halo-color": "#fff",
-                    "text-halo-width": 2
-                }
-
-            })
-            map.on('click', 'clusters', (e) => {
-                const features = map.queryRenderedFeatures(e.point, {
-                    layers: ['clusters']
-                });
-                const clusterId = features[0].properties.cluster_id;
-                map.getSource('all_stops').getClusterExpansionZoom(
-                    clusterId,
-                    (err, zoom) => {
-                        if (err) return;
-
-                        map.easeTo({
-                            center: features[0].geometry.coordinates,
-                            zoom: zoom
-                        });
-                    }
-                );
-            });
-
-            // When a click event occurs on a feature in
-            // the unclustered-point layer, open a popup at
-            // the location of the feature, with
-            // description HTML from its properties.
-            map.on('click', 'bus_stop', (e) => {
-                const coordinates = e.features[0].geometry.coordinates.slice();
-                setData("loading")
-                setAgency(e.features[0].properties.agency)
-                setStop(e.features[0].properties.stop_id)
-
-                //forceUpdate()
-                // Ensure that if the map is zoomed out such that
-                // multiple copies of the feature are visible, the
-                // popup appears over the copy being pointed to.
-                while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-                }
-            });
-
-            map.on('mouseenter', 'clusters', () => {
-                map.getCanvas().style.cursor = 'pointer';
-            });
-            map.on('mouseleave', 'clusters', () => {
-                map.getCanvas().style.cursor = '';
-            });
+            hash: "position",
+            attributionControl: false
         });
+        // Add navigation control (the +/- zoom buttons)
+        map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        // Add geolocate control to the map.
+        map.current.addControl(new mapboxgl.GeolocateControl({
+            positionOptions: {
+                enableHighAccuracy: true
+            },
+            trackUserLocation: true
+        }), 'top-right');
+        // Add attribution control
+        map.current.addControl(new mapboxgl.AttributionControl({
+            customAttribution: 'Last GTFS Update: ' + day.toFormat("yyyy-MM-dd") + " <a href='/notices'>Data Sources</a>"
+        }));
+        // Configure Mapbox Standard Styles
+
+        map.current.on('load', () => {
+            map.current.setConfigProperty('basemap', 'showTransitLabels', false);
+        })
+
+        map.current.on('style.load', () => {
+            map.current.loadImage('/images/bus.png', (error, image) => {
+                if (error) throw error;
+                // Add the loaded image to the style's sprite with the ID 'bus'.
+                map.current.addImage('bus-01', image);
+            });
+            mapLoad()
+        })
+        // Add Custom Layer control
+
+        const layerButton = new MapboxGLButtonControl({
+            className: "mapbox-gl-layer fa",
+            title: "Change Layers",
+            eventHandler: changelayer
+        });
+        map.current.addControl(layerButton, 'top-right');
+
+        function changelayer() {
+            console.log(map.current.getStyle())
+            if (!map.current.getStyle().name) {
+                map.current.setStyle("mapbox://styles/mapbox/satellite-streets-v12")
+            } else {
+                map.current.setStyle("mapbox://styles/mapbox/standard")
+            }
+            console.log(map.current.getStyle())
+            /*map.current.on('style.load', () => {
+                mapLoad()
+            })*/
+        }
 
         // Clean up on unmount
-        return () => map.remove();
+        return () => map.current.remove();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (!agency || !stop) return
@@ -175,57 +124,492 @@ export default function Home() {
         fetch("/api/gtfs/schedule/" + agency + "?stop=" + stop)
             .then((response) => response.json())
             .then((data) => {
-                console.log("data", data)
-                setData(data)
+                console.log("data1", data)
+                if (data.error) {
+                    data.schedule = []
+                    console.log("Error")
+                    setData({ data: data, type: "error" })
+                    return
+                }
+                // Set data, Tell them it is a static schedule
+                setData({ data: data, type: "static" })
+                resetMarkers()
             })
     }, [agency, stop]);
-    function parseData(data) {
+    function mapLoad() {
+
+        console.log("Loaded Map!")
+        map.current.addSource('all_stops', {
+            type: 'geojson',
+            // Point to GeoJSON data for stops
+            data: '/api/geo/all_stops',
+            cluster: true,
+            clusterMaxZoom: 14, // Max zoom to cluster points on
+            clusterRadius: 50 // Radius of each cluster when clustering points (defaults to 50)
+        });
+
+        map.current.addLayer({
+            id: 'clusters',
+            type: 'circle',
+            source: 'all_stops',
+            filter: ['has', 'point_count'],
+
+            paint: {
+                'circle-color': [
+                    'step',
+                    ['get', 'point_count'],
+                    '#ff7700',
+                    100,
+                    '#004777',
+                    750,
+                    '#81a4cd'
+                ],
+                'circle-radius': [
+                    'step',
+                    ['get', 'point_count'],
+                    20,
+                    100,
+                    30,
+                    750,
+                    40
+                ]
+            }
+        });
+
+        map.current.addLayer({
+            id: 'cluster-count',
+            type: 'symbol',
+            source: 'all_stops',
+            filter: ['has', 'point_count'],
+            layout: {
+                'text-field': ['get', 'point_count_abbreviated'],
+                'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                'text-size': 12,
+            },
+            paint: {
+                'text-color': "#fff"
+            }
+        });
+
+        // Use bus icon for bus stops
+        map.current.addLayer({
+            id: 'bus_stop',
+            type: 'symbol',
+            source: 'all_stops',
+            filter: ['!', ['has', 'point_count']],
+            layout: {
+                'icon-image': 'bus-01',
+                'icon-size': 0.2,
+                'icon-allow-overlap': true,
+                'icon-ignore-placement': true
+            }
+        });
+        // Add a layer for the stops' names
+        map.current.addLayer({
+            id: "stop_labels",
+            type: "symbol",
+            source: "all_stops",
+            layout: {
+                "symbol-placement": "point",
+                "text-offset": [0, 2.5],
+                "text-font": ["Open Sans Regular"],
+                "text-field": '{stop_name}',
+                "text-size": 12,
+            }, "paint": {
+                "text-color": "#FF7700",
+                "text-halo-color": "#fff",
+                "text-halo-width": 2
+            }
+
+        })
+
+        map.current.on('click', 'clusters', (e) => {
+            const features = map.current.queryRenderedFeatures(e.point, {
+                layers: ['clusters']
+            });
+            const clusterId = features[0].properties.cluster_id;
+            map.current.getSource('all_stops').getClusterExpansionZoom(
+                clusterId,
+                (err, zoom) => {
+                    if (err) return;
+
+                    map.current.easeTo({
+                        center: features[0].geometry.coordinates,
+                        zoom: zoom
+                    });
+                }
+            );
+        });
+
+        // When a click event occurs on a feature in
+        // the unclustered-point layer, open a popup at
+        // the location of the feature, with
+        // description HTML from its properties.
+        map.current.on('click', 'bus_stop', (e) => {
+            const coordinates = e.features[0].geometry.coordinates.slice();
+            setData({ data: "loading", type: null })
+            setAgency(e.features[0].properties.agency)
+            setStop(e.features[0].properties.stop_id)
+
+            resetMarkers()
+            removeRoute()
+
+            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+            }
+        });
+
+        map.current.on('mouseenter', 'clusters', () => {
+            map.current.getCanvas().style.cursor = 'pointer';
+        });
+        map.current.on('mouseleave', 'clusters', () => {
+            map.current.getCanvas().style.cursor = '';
+        });
+    }
+
+    async function search() {
+        const request = await fetch("/api/dynamic/geolocate?q=" + document.getElementById("geolocate").value)
+
+        const response = await request.json()
+
+        if (response.status === 200) {
+            map.current.flyTo({
+                center: [response.osm.lon, response.osm.lat],
+                zoom: 14,
+                essential: true // this animation is considered essential with respect to prefers-reduced-motion
+            });
+        } else {
+            alert("Sorry, We could not find that location.")
+        
+        }
+    }
+
+    function qryrf() {
+        const fts = map.current.queryRenderedFeatures({ layers: ['bus_stop'] }).filter((x) => {
+            return x.properties.stop_name.toLowerCase().includes(document.getElementById("geolocate").value.toLowerCase()) || x.properties.stop_code.toLowerCase().includes(document.getElementById("geolocate").value.toLowerCase())
+        })
+
+        console.log(fts)
+    }
+    function parseData(info) {
+        console.log("data", info)
+        const data = info.data
+        console.log(agency)
+        // If data is loading, show loading screen
         if (data === "loading") {
             return <div className={map_css.no_content}>
                 <span className="material-icons-outlined" style={{ fontSize: "10vh" }}>pending</span>
                 <p>Loading...</p>
             </div>
-
-        } else if (data === "none") {
+            // If data is none, show no content screen
+        } else if (data === "none" || data === null) {
             return <div className={map_css.no_content}>
                 <div>
                     <span className="material-icons-outlined" style={{ fontSize: "10vh" }}>departure_board</span>
                     <p>Click a stop to see the schedule</p>
+                    <input id="geolocate" placeholder='Search' onKeyUp={() => qryrf()}className={map_css.search_ipt}></input>
+                    <button onClick={() => search()} className={map_css.search_btn}>Search</button>
+                    <div></div>
                 </div>
             </div>
-        } else if (data) {
+            // If data is error, show error screen
+        } else if (info.type === "error") {
+            console.log("Error!")
+            return <div className={map_css.no_content}>
+                <div>
+                    <span className="material-icons-outlined" style={{ fontSize: "10vh" }}>error</span>
+                    <p>{data.message || "Error: Unexpected Error!"}</p>
+                    <a className={map_css.share_pad} onClick={() => resetData()}><span className='material-icons-outlined' style={{ paddingBlock: "1vh" }}>clear</span></a>
+                </div>
+            </div>
+        } else {
             const schedulemap = (function () {
+
                 if (data.schedule.length === 0) {
                     return <div className={map_css.no_content_child}>
                         <div>
                             <span className="material-icons-outlined" style={{ fontSize: "10vh" }}>bus_alert</span>
-                            <p>No Departures</p>
+                            {function () {
+                                if (info.type === "realtime") {
+                                    return <div style={{ display: 'inline' }}><p>No Realtime Information</p></div>
+                                } else {
+                                    return <p>No Departures Available</p>
+                                }
+                            }()}
                         </div>
                     </div>
-                } else {
+                } else if (data.schedule) {
                     return data.schedule.map((schedule) => {
-                        return <div className={map_css.arrv_elem} key={schedule.trip_id}>
-                            <span>{schedule.route}</span><p>{schedule.trip_headsign}</p>
-                            <p>{schedule.attribute} {schedule.arrv}</p>
-                        </div>
+                        const styleArr = [map_css.arrv_elem]
+                        if (schedule.canceled === true) {
+                            styleArr.push(map_css.canceled)
+                        }
+                        return <a className={map_css.schd_a} onClick={(event) => {
+                            console.log(event)
+
+                            if (info.type === "realtime") {
+                                console.log("Fly")
+
+
+                                if (schedule.geo_status) {
+                                    map.current.flyTo({
+                                        center: [schedule.geo.lng, schedule.geo.lat],
+                                        zoom: 14,
+                                        essential: true // this animation is considered essential with respect to prefers-reduced-motion
+                                    });
+                                }
+                                if (agency === "oct") {
+                                    // Special Context to guess Trip ID (OC Transpo RT ONLY)
+                                    getContext(schedule.tripStartTime, schedule.route, schedule.dir)
+                                    // This will call addRoute() when it is done
+                                }
+                            } else {
+                                // Add Route Directly since we have the Trip ID already
+                                addRoute(schedule.trip_id, agency)
+                            }
+                        }} key={schedule.trip_id || "NOKEY_" + Math.random()}><div className={styleArr.join(" ")} >
+                                <div className={map_css.headsign}><span className={map_css.route_span}>{schedule.route}</span><p>{schedule.trip_headsign}</p></div>
+                                <br />
+                                <p>
+                                {(function () {
+                                    console.log(schedule)
+                                    if (schedule.canceled === true) {
+                                        return "(Likley Canceled) Scheduled at: "
+                                    } else {
+                                        return schedule.attribute + " "
+                                    }
+                                }())}
+                               {schedule.arrv} </p>
+                            </div></a>
                     })
                 }
             })()
+            const tripmap = data.schedule.map((schedule) => {
+                return schedule.trip_id
+            }).join(",")
             return <div className={map_css.arrv_parent}>
                 <div className={map_css.heading_child}>
                     <h3 className={map_css.header}>{data.stop.stop_name}</h3>
-                    {(function () {
-                        if (data.schedule.length !== 0) {
-                            return <a className={map_css.button} href={"/api/agRedir?ag=" + agency + "&stop=" + stop}>View Realtime</a>
-                        } else {
-                            return <a className={map_css.button} href={"/schedule/" + agency.replace("oct", "octranspo") + "/" + stop}>View Schedule</a>
-                        }
-                    })()}
                 </div>
-                <div className={map_css.arrv_scroll}>{schedulemap}
-                </div>
+                <div className={map_css.arrv_scroll}>{schedulemap}</div>
+
+                {(function () {
+                    if (data.schedule.length !== 0) {
+                        return <div className={map_css.button_flex}>
+                            <a className={map_css.share} onClick={() => requestRealtime(tripmap, agency, data.stop.stop_id)}>
+                                <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>{function () {
+                                    if (info.type === "realtime") {
+                                        return "refresh"
+                                    } else {
+                                        return "schedule"
+                                    }
+                                }()}</span>
+                            </a>
+                            <a className={map_css.share} href={function () {
+                                if (agency === "sto") {
+                                    return "/schedule/sto/" + data.stop.stop_id + "?realtime=true"
+                                } else {
+                                    return "/schedule/" + agency + "/" + data.stop.stop_id
+                                }
+                            }()}>
+                                <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>departure_board</span>
+                            </a>
+                        </div>
+                    } else /*if (info.type === "realtime")*/ {
+                        return <div className={map_css.button_flex}><a className={map_css.share_sm} onClick={() => resetData()}><span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>clear</span></a><a className={map_css.button} href={"/schedule/" + agency.replace("oct", "octranspo") + "/" + stop}>View Schedule</a></div>
+                    }
+                })()}
             </div>
         }
+    }
+    function resetData() {
+        setData({ data: null, type: null })
+        setAgency(agency)
+        setStop(stop)
+        resetMarkers()
+        console.log(data)
+    }
+    function requestRealtime(trip_id, agency, stopID) {
+        setData({ data: "loading", type: null })
+        if (agency === "oct") {
+            // OC Transpo Uses a custom API, so we need to return a different API
+            fetch("/api/dynamic/oct_realtime?stop=" + stopID)
+                .then((response) => response.json())
+                .then((data) => { /* Map the Data */
+                    console.log("Realtime", data)
+                    if (data.error) {
+                        console.log("Error :(")
+                        return { error: data }
+                    }
+                    if (!data.arrivals) {
+                        return []
+                    }
+                    return data.arrivals.filter((x) => {
+                        return x.time.tripStartTime
+                    }).map((x) => {
+                        const geoStatus = (function () {
+                            if (x.geo) {
+                                return "Arriving at:"
+                            } else {
+                                return "Scheduled at:"
+                            }
+                        })()
+                        console.log(x)
+                        return {
+                            route: x.no,
+                            service_id: null,
+                            arrv: x.time.hhmm,
+                            attribute: geoStatus,
+                            trip_id: null,
+                            trip_headsign: x.destination || x.heading || "Missing Destination",
+                            dir: x.direction,
+                            canceled: x.canceled,
+                            tripStartTime: x.time.tripStartTime,
+                            shape: null,
+                            geo_status: x.geo,
+                            geo: {
+                                lat: x.latitude,
+                                lng: x.longitude
+                            }
+                        }
+                    })
+                })
+                .then((schedule) => {
+                    if (schedule.error) {
+                        console.log("Error :(")
+                        setData({ data: schedule.error, type: "error" })
+                        return []
+                    } else {
+                        console.log("Schedule", schedule)
+                        setData({ data: { schedule: schedule, stop: data.data.stop }, type: "realtime" })
+                        return schedule.filter((x) => { return x.geo_status === true })
+                    }
+                })
+                .then((geo) => {
+                    resetMarkers()
+                    console.log(geo)
+                    // Add Markers
+                    const newMarkers = []
+                    geo.forEach((x) => {
+                        const el = document.createElement('div');
+                        el.className = map_css.marker;
+                        el.innerHTML = "<span class='material-icons-round' style='font-size: 5vh;'>directions_bus</span>";
+                        el.addEventListener('click', () => {
+                            getContext(x.tripStartTime, x.route, x.dir)
+                        });
+                        console.log("positions:", x)
+                        const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`<div><h3>${x.route}</h3><p>${x.trip_headsign}</p></div>`);
+                        newMarkers.push(new mapboxgl.Marker(el).setLngLat([x.geo.lng, x.geo.lat]).setPopup(popup).addTo(map.current))
+                    });
+                    setMarker(newMarkers)
+
+                })
+        } else if (agency === "sto") {
+            // Lets Work with (Real) GTFS data now!
+            //console.log(trip_id)
+            fetch("/api/gtfs/vehicle/sto?trip=" + trip_id)
+                .then((response) => response.json())
+                .then((geo) => {
+                    // Add Markers
+                    resetMarkers()
+                    console.log(geo)
+                    const newMarkers = []
+                    geo.arrivals.forEach((x) => {
+                        // Create Markers
+                        const el = document.createElement('div');
+                        el.className = map_css.marker;
+                        el.innerHTML = "<span class='material-icons-round' style='font-size: 5vh; color: #FF7700'>directions_bus</span>";
+                        el.addEventListener('click', () => {
+                            addRoute(x.trip.trip_id, agency)
+                        });
+                        newMarkers.push(new mapboxgl.Marker(el).setLngLat([x.longitude, x.latitude]).addTo(map.current))
+                    })
+                    setData({ data: { schedule: data.data.schedule, stop: data.data.stop }, type: "realtime" })
+
+                })
+        }
+    }
+    function resetMarkers() {
+        console.log(marker)
+        if (marker) {
+            // Remove Markers if they exist
+            marker.forEach((x) => {
+                x.remove()
+            })
+            //console.log("removed")
+            // Set Marker to null
+            setMarker(null)
+        }
+        console.log("Markers Reset!")
+        return
+    }
+    function getContext(startTime, route, direction) {
+        fetch("/api/dynamic/context?startTime=" + startTime + "&route=" + route + "&direction=" + direction)
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.results.length === 0) {
+                    alert("No Shape Available for that route :(")
+                } else {
+                    addRoute(data.results.map((x) => {
+                        console.log(x)
+                        return x.trip_id
+                    }).join(","), "oct")
+                }
+            })
+    }
+
+    function removeRoute() {
+        if (map.current.getLayer("context_rt_lyr")) {
+            console.log("Existing layer found")
+            map.current.removeLayer("context_rt_lyr");
+        }
+        if (map.current.getLayer("context_rt_sym")) {
+            console.log("Existing layer found")
+            map.current.removeLayer("context_rt_sym");
+        }
+        if (map.current.getSource("context_rt_src")) {
+            console.log("Existing source found")
+            map.current.removeSource("context_rt_src");
+        }
+        console.log("Removed Route!")
+    }
+    function addRoute(trip_id, agency) {
+        removeRoute()
+
+        map.current.addSource('context_rt_src', {
+            type: 'geojson',
+            // Use a URL for the value for the `data` property.
+            data: '/api/geo/shapesByTrips?agency=' + agency + '&id=' + trip_id
+        });
+
+        map.current.addLayer({
+            'id': 'context_rt_lyr',
+            'type': 'line',
+            'source': 'context_rt_src',
+            'paint': {
+                'line-color': '#004777',
+                'line-width': 3
+            },
+        },
+            'clusters'
+        );
+
+        map.current.addLayer({
+            "id": "context_rt_sym",
+            "type": "symbol",
+            "source": "context_rt_src",
+            "layout": {
+                "symbol-placement": "line",
+                "text-offset": [0, 0.5],
+                "text-font": ["Open Sans Regular"],
+                "text-field": '{route}',
+                "text-size": 18,
+            }, "paint": {
+                "text-color": "#004777",
+                "text-halo-color": "#fff",
+                "text-halo-width": 2
+            }
+        });
     }
     return (
         <div>
@@ -237,7 +621,6 @@ export default function Home() {
                     <div className={map_css.sidebar}>
                         <div className={map_css.sidebar_header}>
                             <h1>Benja Transit</h1>
-                            <p>NCR Public Transit Tracker</p>
                         </div>
                         <div>
                             {parseData(data)}
@@ -249,3 +632,14 @@ export default function Home() {
         </div>
     );
 };
+
+export async function getServerSideProps() {
+    const request = await fetch("https://benjamin-del.github.io/TransitDB3/update.json")
+    const response = await request.json()
+
+    return {
+        props: {
+            update: response.update
+        }
+    }
+}

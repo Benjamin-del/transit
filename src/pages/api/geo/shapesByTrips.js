@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     const params = new URL(req.url).searchParams
     const ag = params.get("agency")
     const tripIds = params.get("id").split(",")
-    if (!tripIds) {
+    if (!tripIds || !ag) {
         return new Response(JSON.stringify({ error: "Missing required parameters" }), {
             status: 400,
             headers: {
@@ -17,6 +17,7 @@ export default async function handler(req, res) {
             },
         });
     }
+    console.log("GEO/SHAPEBYTRIPS:" + tripIds + " " + ag)
     const sps = await gtfs.download("shapes.txt", ag)
     const tps = await gtfs.download("trips.txt", ag)
     const fts = []

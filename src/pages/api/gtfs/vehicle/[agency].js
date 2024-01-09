@@ -6,11 +6,18 @@ const gtfs_rt = config.gtfs_rt
 
 export default async function handler(req,res) {
     const agency = req.query.agency
-    if (!gtfs_rt.includes(agency)) {
-        res.status(400).json({ error: "Invalid Agency" })
-        return 
+    if (!req.query.trip || !agency) {
+        console.log("GTFS/VEHICLE: Missing required parameters")
+        res.status(400).json({ error: "Missing required parameters" })
+        return
     }
 
+    if (!gtfs_rt.includes(agency)) {
+        res.status(501).json({ error: "Invalid Agency" })
+        console.log("GTFS/VEHICLE:" + agency + " INVALID AGENCY")
+        return 
+    }
+    console.log("GTFS/VEHICLE:" + req.query.trip + " " + agency)
     const feed = await gtfs_realtime.realtime("vehicule", agency)
     const trips = await gtfs.download("trips.txt", agency)
     function cacheTrips(tripId) {

@@ -9,18 +9,21 @@ import gtfs_realtime from "../../../../../helpers/realtime_gtfs"
 export default async function handler(req, res) {
     const agency = req.query.agency
     if (!gtfs_rt.includes(agency)) {
-        res.status(400).json({ error: "Invalid Agency" })
+        res.status(501).json({ error: "Invalid Agency" })
+        console.log("GTFS/VEHICLE:" + agency + " INVALID AGENCY")
         return 
     }
 
     const stopId = req.query.stop
 
-    const trips = await gtfs.download("trips.txt", agency)
-
     if (!trips || !stopId) {
+        console.log("GTFS/SCHEDULE: Missing required parameters")
         res.status(400).json({ error: "Missing required parameters" })
     }
+    console.log("GTFS/UPDATES:" + stopId + " " + agency)
     const stop = await helper_stops.get(stopId, agency)
+    const trips = await gtfs.download("trips.txt", agency)
+
     if (!stop) {
         res.status(404).json({ error: "404" })
         return

@@ -15,6 +15,7 @@ export default async function handler(req, res) {
             },
         });
     }
+    console.log("GEO/STOPS:" + ag)
     const stops = await gtfs.download("stops.txt", ag)
     const mp = stops.filter((x) => {
         const dts = x.split(",")

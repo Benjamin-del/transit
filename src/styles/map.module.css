@@ -14,7 +14,7 @@
 
 .arrv_scroll {
   overflow-x: scroll;
-  height: 80vh;
+  height: 84vh;
 }
 
 .loading {
@@ -33,7 +33,7 @@
 .arrv_elem {
   display: flex;
   justify-content: flex-start;
-  gap: 1vh;
+  /*gap: 1vh;*/
   align-items: center;
   flex-direction: row;
   flex-wrap: wrap;
@@ -43,8 +43,10 @@
   padding: 0.5vh;
   border-radius: 1vh;
 }
-
-.arrv_elem span {
+.arrv_elem p {
+  width: 100%;
+}
+.arrv_elem span:not(.material-icons-outlined) {
   background: #004777;
   color: white;
   padding-inline: 1vh;
@@ -52,7 +54,7 @@
 }
 
 .sidebar_header {
-  height: 10vh;
+  height: 7vh;
   background: white;
   text-align: center;
   /*border-bottom: 1px solid #004777;*/
@@ -61,23 +63,70 @@
 .marker {
   color: #004777;
 }
+.search_btn {
+  color: #004777;
+  border-bottom: 1px solid;
+}
 
+.search_ipt {
+  border-bottom: 1px solid #004777;
+}
 .arrv_scroll_5 {
   overflow-x: scroll;
   height: 85vh;
 }
-
+.share {
+  display: block;
+  background: #004777;
+  color: white;
+  padding-inline: 1vh;
+  border-radius: 1vh;
+  border: none;
+  text-align: center;
+  width: 100%;
+}
+.share_pad {
+  display: block;
+  background: #004777;
+  color: white;
+  padding-inline: 1vh;
+  border-radius: 1vh;
+  border: none;
+  text-align: center;
+  /* width: 100%; */
+  margin-inline: 2vh;
+}
+.share_sm {
+  display: block;
+  background: #004777;
+  color: white;
+  padding-inline: 1vh;
+  border-radius: 1vh;
+  border: none;
+  text-align: center;
+  /*width: 100%;*/
+}
 .button {
+  display: block;
   background: #004777;
   color: white;
   padding: 1vh;
-  margin-inline: 2.5%;
-  width: 95%;
+  width: 100%;
   border-radius: 1vh;
   border: none;
   text-align: center;
 }
-
+.button_flex {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  padding-inline: 1vh;
+}
+.schd_a {
+  flex: none;
+  width: 90%;
+}
 .error {
   display: flex;
   flex-direction: column;
@@ -105,7 +154,7 @@
 
 .no_content_child {
   display: flex;
-  height: 100%;
+  /*height: 100%;*/
   flex-direction: column;
   flex-wrap: nowrap;
   align-content: center;
@@ -113,10 +162,22 @@
   align-items: center;
   text-align: center;
   color: #FF7700;
-  ;
+  width: 100%;
 
 }
+.headsign {
+  display: flex;
+  width: 100%;
+  gap: 1vh;
+  align-items: center;
+}
 
+.multi_span {
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+  justify-content: space-around;
+}
 @media screen and (max-width: 768px) {
   .main_content {
     display: flex;
@@ -125,7 +186,7 @@
 
   .map_container {
     width: 100%;
-    height: 62vh;
+    height: 60vh;
   }
 
   .sidebar {
@@ -133,10 +194,10 @@
   }
 
   .arrv_scroll {
-    height: 20vh;
+    height: 14vh;
     display: flex;
     flex-direction: row;
-    color: #FF7700;
+    /*color: #FF7700;*/
   }
 
   .arrv_scroll_5 {
@@ -150,20 +211,21 @@
   }
 
   .sidebar_header {
-    height: 9vh;
+    height: 5vh;
     text-align: center;
   }
 
   .arrv_elem {
     display: flex;
     justify-content: flex-start;
-    gap: 1vh;
+    /*gap: 1vh;*/
     align-items: flex-start;
     flex-direction: row;
     flex-wrap: wrap;
     margin: 1vh;
     border-radius: 1vh;
-    width: 25vh;
+    /*width: 25vh;*/
+    height: 80%;
     flex: none;
     background: #efefef;
     padding: 1vh;
@@ -174,10 +236,16 @@
   }
 
   .no_content {
-    height: 25vh;
+    height: 20vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
     color: #FF7700;
   }
+}
+
+.canceled {
+  background: #FF7700;
+  padding: 1vh;
+  color: white;
 }

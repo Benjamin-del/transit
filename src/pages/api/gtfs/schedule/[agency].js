@@ -17,6 +17,7 @@ export default async function handler(req, res) {
     const ag = pathname.split("/")[4]
 
     if (!stopid || !ag) {
+        console.log("GTFS/SCHEDULE: Missing required parameters")
         return new Response(JSON.stringify({ error: "Missing required parameters" }), {
             status: 400,
             headers: {
@@ -24,6 +25,7 @@ export default async function handler(req, res) {
             },
         });
     }
+    console.log("GTFS/SCHEDULE:" + stopid + " " + ag)
     const stop = await helper_stops.get(stopid, ag)
     if (!stop) {
         return new Response(JSON.stringify({ error: "404" }), {
@@ -112,8 +114,6 @@ export default async function handler(req, res) {
             //console.log(accdays.includes(dts[1]))
             
             if (dts[2] === x.id && accdays.includes(dts[1])) {
-                // VIA:   route_id,service_id,trip_id,shape_id,trip_short_name,trip_headsign,direction_id
-                // OTHER: route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id
 
                 ftldtps.push({
                     route: dts[0],
@@ -136,6 +136,7 @@ export default async function handler(req, res) {
             time: gtfshr,
             date: gtfsdt,
             stop: stopid,
+            agency: ag.replace("oct","OC Transpo"),
             accdays: accdays,
             gtfsmx: gtfsmx,
             realtime_support: (function () {

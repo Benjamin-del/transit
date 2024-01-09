@@ -9,9 +9,27 @@ export const config = {
 };
 export default async function handler(req, res) {
     const params = new URL(req.url).searchParams
+    const time = params.get("startTime")
+    const route = params.get("route");
+    const dirid = params.get("direction");
+
+    if (!time || !route || !dirid) {
+        return new Response(
+            JSON.stringify({ message: 'Missing required parameters' }),
+            {
+                status: 400,
+                headers: {
+                    'content-type': 'application/json',
+                },
+            },
+        );
+    }
+    console.log("DYNAMIC/CONTEXT:" + time + " " + route + " " + dirid + "oct")
     const now = DateTime.now().setZone(zone)
     const gtfsdt = Number(now.toFormat('yyyyMMdd'))
     // Trasforming the current date to the format of yyyyMMdd, and converting to a number so I can do math with it and the dates
+
+
     const list = await gtfs.download("calendar.txt", "oct")
     function acceptabledate() {
         // Reusable function that returns an array of days that are acceptable
@@ -41,28 +59,12 @@ export default async function handler(req, res) {
         return comp === startDate || comp === endDate || (comp > startDate && comp < endDate) && obj[day] === "1"
     }
 
-    const time = params.get("startTime")
-    const route = params.get("route");
-    const dirid = params.get("direction");
-
-    if (!time || !route || !dirid) {
-        return new Response(
-            JSON.stringify({ message: 'Missing required parameters' }),
-            {
-                status: 400,
-                headers: {
-                    'content-type': 'application/json',
-                },
-            },
-        );
-    }
-
     async function getContext() {
         const tps = await gtfs.download("trips.txt", "oct")
         const tms = await gtfs.download("stop_times.txt", "oct")
 
         const accdays = acceptabledate()
-        console.log("Acceptable days:", accdays)
+        //console.log("Acceptable days:", accdays)
 
         const ftld = tms.filter((x) => {
             const dts = x.split(",")
@@ -95,7 +97,7 @@ export default async function handler(req, res) {
                 route: dts[0],
                 service_id: dts[1],
                 trip_id: dts[2],
-                headsign: dts[3],
+                headsign: dts[3].replace(/\"/g, ""),
                 dir: dts[4],
                 shape: dts[5].replace("\r", ""),
                 gtfs: await route_helper.get(dts[0], "oct")
@@ -103,7 +105,7 @@ export default async function handler(req, res) {
         }))
     }
     const data = await getContext()
-    console.log("data", data)
+    //console.log("data", data)
     return new Response(
         JSON.stringify({
             query: {
