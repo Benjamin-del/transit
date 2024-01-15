@@ -109,10 +109,6 @@ export default function Home({ update }) {
             } else {
                 map.current.setStyle("mapbox://styles/mapbox/standard")
             }
-            console.log(map.current.getStyle())
-            /*map.current.on('style.load', () => {
-                mapLoad()
-            })*/
         }
 
         // Clean up on unmount
@@ -120,22 +116,26 @@ export default function Home({ update }) {
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (!agency || !stop) return
-        console.log("agency", agency)
-        fetch("/api/gtfs/schedule/" + agency + "?stop=" + stop)
-            .then((response) => response.json())
-            .then((data) => {
-                console.log("data1", data)
-                if (data.error) {
-                    data.schedule = []
-                    console.log("Error")
-                    setData({ data: data, type: "error" })
-                    return
-                }
-                // Set data, Tell them it is a static schedule
-                setData({ data: data, type: "static" })
-                resetMarkers()
-            })
+        configStatSched(agency, stop)
     }, [agency, stop]);
+
+    function configStatSched(agency, stop) {
+        fetch("/api/gtfs/schedule/" + agency + "?stop=" + stop)
+        .then((response) => response.json())
+        .then((data) => {
+            console.log("data1", data)
+            if (data.error) {
+                data.schedule = []
+                console.log("Error")
+                setData({ data: data, type: "error" })
+                return
+            }
+            // Set data, Tell them it is a static schedule
+            setData({ data: data, type: "static" })
+            resetMarkers()
+        })
+
+    }
     function mapLoad() {
 
         console.log("Loaded Map!")
@@ -268,6 +268,7 @@ export default function Home({ update }) {
     }
 
     async function search() {
+
         const request = await fetch("/api/dynamic/geolocate?q=" + document.getElementById("geolocate").value)
 
         const response = await request.json()
@@ -280,7 +281,7 @@ export default function Home({ update }) {
             });
         } else {
             alert("Sorry, We could not find that location.")
-        
+
         }
     }
 
@@ -307,7 +308,7 @@ export default function Home({ update }) {
                 <div>
                     <span className="material-icons-outlined" style={{ fontSize: "10vh" }}>departure_board</span>
                     <p>Click a stop to see the schedule</p>
-                    <input id="geolocate" placeholder='Search' onKeyUp={() => qryrf()}className={map_css.search_ipt}></input>
+                    <input id="geolocate" placeholder='Search' onKeyUp={() => qryrf()} className={map_css.search_ipt}></input>
                     <button onClick={() => search()} className={map_css.search_btn}>Search</button>
                     <div></div>
                 </div>
@@ -371,15 +372,15 @@ export default function Home({ update }) {
                                 <div className={map_css.headsign}><span className={map_css.route_span}>{schedule.route}</span><p>{schedule.trip_headsign}</p></div>
                                 <br />
                                 <p>
-                                {(function () {
-                                    console.log(schedule)
-                                    if (schedule.canceled === true) {
-                                        return "(Likley Canceled) Scheduled at: "
-                                    } else {
-                                        return schedule.attribute + " "
-                                    }
-                                }())}
-                               {schedule.arrv} </p>
+                                    {(function () {
+                                        console.log(schedule)
+                                        if (schedule.canceled === true) {
+                                            return "Likley Canceled | Scheduled at: "
+                                        } else {
+                                            return schedule.attribute + " "
+                                        }
+                                    }())}
+                                    {schedule.arrv} </p>
                             </div></a>
                     })
                 }
@@ -396,6 +397,16 @@ export default function Home({ update }) {
                 {(function () {
                     if (data.schedule.length !== 0) {
                         return <div className={map_css.button_flex}>
+                            <a className={map_css.share_sm} onClick={() => closeArrivals(info)}>
+                                <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>{function () {
+                                    if (info.type === "realtime") {
+                                        return "arrow_back"
+                                    } else {
+                                        return "close"
+                                    }
+                                }()}</span>
+                            </a>
+                                    
                             <a className={map_css.share} onClick={() => requestRealtime(tripmap, agency, data.stop.stop_id)}>
                                 <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>{function () {
                                     if (info.type === "realtime") {
@@ -427,7 +438,18 @@ export default function Home({ update }) {
         setAgency(agency)
         setStop(stop)
         resetMarkers()
+        removeRoute()
         console.log(data)
+    }
+
+    function closeArrivals(info) {
+        if (info.type === "realtime") {
+            resetData()
+            setData({ data: "loading", type: null })
+            configStatSched(agency, stop)
+        } else {
+            resetData()
+        }
     }
     function requestRealtime(trip_id, agency, stopID) {
         setData({ data: "loading", type: null })
