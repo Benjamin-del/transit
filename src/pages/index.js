@@ -6,6 +6,7 @@ import Head from 'next/head';
 import 'material-icons/iconfont/material-icons.css'
 import { useRouter } from 'next/router'
 import { DateTime } from 'luxon';
+
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_KEY;
 
 export default function Home({ update }) {
