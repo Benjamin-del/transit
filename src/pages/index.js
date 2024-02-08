@@ -7,6 +7,7 @@ import 'material-icons/iconfont/material-icons.css'
 import { useRouter } from 'next/router'
 import { DateTime } from 'luxon';
 import Link from 'next/link'
+import Image from 'next/image'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_KEY;
 
@@ -316,7 +317,13 @@ export default function Home({ update }) {
         } else if (data === "none" || data === null) {
             return <div className={map_css.no_content}>
                 <div>
-                    <span className="material-icons-outlined" style={{ fontSize: "10vh" }}>departure_board</span>
+                    <Image
+                        src="/images/icon.png"
+                        alt="Benja Transit Logo"
+                        width={200}
+                        height={200}
+                        className={map_css.logo}
+                    />
                     <p>Click a stop to see the schedule</p>
                     <input id="geolocate" placeholder='Search by Location' onKeyUp={() => qryrf()} className={map_css.search_ipt}></input>
                     <button onClick={() => search()} className={map_css.search_btn}>Search</button>

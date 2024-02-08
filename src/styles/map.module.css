@@ -172,6 +172,9 @@
   align-items: center;
 }
 
+.logo {
+  margin: auto;
+}
 .multi_span {
   display: flex;
   width: 100%;
@@ -234,13 +237,16 @@
   .error {
     width: 100%;
   }
-
+  .logo {
+    display: none;
+  }
   .no_content {
-    height: 20vh;
+    height: 25vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
     color: #FF7700;
+    align-items: center;
   }
 }
 
