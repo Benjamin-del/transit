@@ -293,6 +293,14 @@ export default function Home({ update }) {
 
         console.log(fts)
     }
+
+    function flyTo(lat, lng) {
+        map.current.flyTo({
+            center: [lng, lat],
+            zoom: 16,
+            essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+    }
     function parseData(info) {
         console.log("data", info)
         const data = info.data
@@ -309,9 +317,11 @@ export default function Home({ update }) {
                 <div>
                     <span className="material-icons-outlined" style={{ fontSize: "10vh" }}>departure_board</span>
                     <p>Click a stop to see the schedule</p>
-                    <input id="geolocate" placeholder='Search' onKeyUp={() => qryrf()} className={map_css.search_ipt}></input>
+                    <input id="geolocate" placeholder='Search by Location' onKeyUp={() => qryrf()} className={map_css.search_ipt}></input>
                     <button onClick={() => search()} className={map_css.search_btn}>Search</button>
-                    <div></div>
+                </div>
+                <div>
+                    <a href='https://github.com/Benjamin-Del/transit'><p>Benja Transit v3.0.5</p></a>
                 </div>
             </div>
             // If data is error, show error screen
@@ -364,6 +374,8 @@ export default function Home({ update }) {
                                     // Special Context to guess Trip ID (OC Transpo RT ONLY)
                                     getContext(schedule.tripStartTime, schedule.route, schedule.dir)
                                     // This will call addRoute() when it is done
+                                } else {
+                                    addRoute(schedule.trip_id, agency)
                                 }
                             } else {
                                 // Add Route Directly since we have the Trip ID already
@@ -391,7 +403,7 @@ export default function Home({ update }) {
             }).join(",")
             return <div className={map_css.arrv_parent}>
                 <div className={map_css.heading_child}>
-                    <h3 className={map_css.header}>{data.stop.stop_name}</h3>
+                    <a onClick={() => flyTo(data.stop.stop_lat, data.stop.stop_lon)}><h3 className={map_css.header}>{data.stop.stop_name}</h3></a>
                 </div>
                 <div className={map_css.arrv_scroll}>{schedulemap}</div>
 

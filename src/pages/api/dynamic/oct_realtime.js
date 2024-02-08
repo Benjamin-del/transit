@@ -5,11 +5,8 @@ const zone = "America/Toronto"
 import gtfs from "../../../../helpers/fetch_gtfs"
 import oc_alerts from "../../../../helpers/oc_alerts";
 
-// This fetched our file and returns it.
-
-
 export const config = {
-	runtime: 'edge', // this is a pre-requisite
+	runtime: 'edge', 
 };
 
 export default async function handler(req, res) {
@@ -54,9 +51,14 @@ export default async function handler(req, res) {
 		// OCtranspo API is weird, sometimes it returns an array, sometimes it returns an object???
 		if (JSON.stringify(objorarr).split("")[0] === "{") {
 			//Cheating, but typeof returns object for both arrays and objects
+			console.log("input", objorarr)
+			console.log("Converting to array")
+			console.log("output", [objorarr])
 			return [objorarr]
 			// It's an object, so I'm going to make it an array
 		} else {
+			console.log("Not to array")
+			console.log(objorarr)
 			return objorarr
 			// Yay! It's an array!
 		}
@@ -65,6 +67,7 @@ export default async function handler(req, res) {
 	}
 
 	async function fetchData(code) {
+		// Convert ID (GTFS) To Code (OC API)
 		try {
 			const data = await fetch("https://api.octranspo1.com/v2.0/GetNextTripsForStopAllRoutes?appID=87c88940&apiKey=6ef18ce1eff8c5741812b6814766b7e0&format=JSON&stopNo=" + code)
 			// The content-type header on the OC API is set to HTML. This parses the data as text, and then converts it to JSON.
@@ -90,14 +93,11 @@ export default async function handler(req, res) {
 		if (!stp_inf) {
 			return { status: 404, message: "Error: Stop not found" }
 		}
-
 		console.log("Loading code:" + stp_inf.code)
 		const response = await fetchData(stp_inf.code)
 		if (response.error) {
 			return response
-
 		} else {
-			
 			const json = response
 			const rt = json.GetRouteSummaryForStopResult.Routes.Route
 			const route = objToArray(rt)
@@ -111,16 +111,25 @@ export default async function handler(req, res) {
 			const tmSt = tm_arr.flat().sort((a, b) => {
 				return a.time.adjustedTime - b.time.adjustedTime
 			})
-			
-			return { arrivals: tmSt, stop: stp_inf, /*cancelations: cancelations */};
+
+			return { arrivals: tmSt, stop: stp_inf, /*cancelations: cancelations */ };
 		}
 	}
 	async function geoJsonCollect(obj) {
-		// When there is only one trip/route/value, the API returns an object, not an array. This makes sure that it's always an array.
-		const trips = objToArray(obj.Trips)
-		
-		
-		return trips.map((trip) => {
+
+		// If there is only one route that serves the stop, the api returns {Trips: {Trip: [array]}}, but if there is multiple routes it returns {Trips: [array]}
+		// This behavior is not documented in the API documentation, and is very annoying It should also not be happening on a production server!.
+		const multiTrip = (function () {
+			if (Array.isArray(obj.Trips)) {
+				return obj.Trips
+				// This is what it should be doing
+			} else {
+				return obj.Trips.Trip
+				// This is not OK!
+			}
+			// I am not going to be using the conversion function, as it can cause some problems.
+		})()
+		return multiTrip.map((trip) => {
 			console.log(trip)
 			// Logic to decide if the trip has a high likleyhood of being canceled.
 			const route_cancl = cancelations.filter((cancelation) => {
@@ -131,7 +140,7 @@ export default async function handler(req, res) {
 					}
 				}
 			}).length
-			
+
 			return {
 				no: obj.RouteNo,
 				heading: obj.RouteHeading,
@@ -151,11 +160,11 @@ export default async function handler(req, res) {
 				latitude: trip.Latitude,
 				lastTrip: trip.LastTripOfSchedule,
 			}
-		})
+		}).flat()
 	}
 	const rt = await createAPIResponse()
 	console.log("error", rt.error)
-	
+
 	return new Response(
 		JSON.stringify(rt),
 		{
