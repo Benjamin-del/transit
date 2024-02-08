@@ -468,20 +468,33 @@ export default function Home({ update }) {
                         return []
                     }
                     return data.arrivals.filter((x) => {
-                        return x.time.tripStartTime
+                        return x.time.adjustedStopTime
                     }).map((x) => {
                         const geoStatus = (function () {
-                            if (x.geo) {
+                            if (x.time.adjustedStopTime && x.time.adjustedStopTime < 15) {
+                                // If the bus is arriving in less than 15 minutes, display the minutes until arrival
+                                return "Arriving in "
+                            } else if (x.geo) {
                                 return "Arriving at:"
                             } else {
                                 return "Scheduled at:"
+                            }
+                        })()
+
+                        const arrv = (function () {
+                            if (x.time.adjustedStopTime && x.time.adjustedStopTime < 15) {
+                                // If the bus is arriving in less than 15 minutes, display the minutes until arrival
+                                return x.time.adjustedStopTime + " mins"
+                            } else {
+                                return x.time.hhmm
                             }
                         })()
                         console.log(x)
                         return {
                             route: x.no,
                             service_id: null,
-                            arrv: x.time.hhmm,
+                            arrv: arrv,
+                            adjustedStopTime: x.time.adjustedStopTime,
                             attribute: geoStatus,
                             trip_id: null,
                             trip_headsign: x.destination || x.heading || "Missing Destination",
@@ -570,7 +583,8 @@ export default function Home({ update }) {
         fetch("/api/dynamic/context?startTime=" + startTime + "&route=" + route + "&direction=" + direction)
             .then((response) => response.json())
             .then((data) => {
-                if (data.results.length === 0) {
+                console.log(data)
+                if (data.error === 400 || data.results.length === 0) {
                     alert("No Shape Available for that route :(")
                 } else {
                     addRoute(data.results.map((x) => {

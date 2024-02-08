@@ -50,7 +50,7 @@ export default async function handler(req, res) {
 		return null
 	}
 
-	function arrayobj(objorarr) {
+	function objToArray(objorarr) {
 		// OCtranspo API is weird, sometimes it returns an array, sometimes it returns an object???
 		if (JSON.stringify(objorarr).split("")[0] === "{") {
 			//Cheating, but typeof returns object for both arrays and objects
@@ -63,11 +63,11 @@ export default async function handler(req, res) {
 		// This is a very hacky way of doing it, but it works.
 		// I took this part straight from v2 of the API. 
 	}
-	const tm_arr = []
 
 	async function fetchData(code) {
 		try {
 			const data = await fetch("https://api.octranspo1.com/v2.0/GetNextTripsForStopAllRoutes?appID=87c88940&apiKey=6ef18ce1eff8c5741812b6814766b7e0&format=JSON&stopNo=" + code)
+			// The content-type header on the OC API is set to HTML. This parses the data as text, and then converts it to JSON.
 			const response = await data.text()
 			//console.log(response)
 			if (response.includes("<h4>") || response.includes("<html>")) {
@@ -85,7 +85,7 @@ export default async function handler(req, res) {
 			return { error: 500, message: "Error: Server Connection Error!" }
 		}
 	}
-	async function ocrealtime() {
+	async function createAPIResponse() {
 		const stp_inf = await code2id(stopid)
 		if (!stp_inf) {
 			return { status: 404, message: "Error: Stop not found" }
@@ -97,66 +97,64 @@ export default async function handler(req, res) {
 			return response
 
 		} else {
-			// Why did you send JSON as HTML???
+			
 			const json = response
 			const rt = json.GetRouteSummaryForStopResult.Routes.Route
-			const route = arrayobj(rt)
+			const route = objToArray(rt)
+			const tm_arr = []
+			//console.log(route)
 			for (var i = 0; i < route.length; i++) {
-				await geoJsonCollect(route[i])
+				// For each route, get the trips.
+				tm_arr.push(await geoJsonCollect(route[i]))
 			}
-
-			const tmSt = tm_arr.sort((a, b) => {
+			//Flatten the array of arrays & Sort by arrival time
+			const tmSt = tm_arr.flat().sort((a, b) => {
 				return a.time.adjustedTime - b.time.adjustedTime
 			})
-
+			
 			return { arrivals: tmSt, stop: stp_inf, /*cancelations: cancelations */};
 		}
 	}
 	async function geoJsonCollect(obj) {
-		//console.log("data-2", obj.Trips)
-		// Sometimes it returns an array, sometimes it returns an object. This makes sure it is an Object
-		// I will return this array 
-
-		const trips = arrayobj(obj.Trips)
-		for (var i = 0; i < trips.length; i++) {
-			// Push to array of all trips (GPS or not)
+		// When there is only one trip/route/value, the API returns an object, not an array. This makes sure that it's always an array.
+		const trips = objToArray(obj.Trips)
+		
+		
+		return trips.map((trip) => {
+			console.log(trip)
+			// Logic to decide if the trip has a high likleyhood of being canceled.
 			const route_cancl = cancelations.filter((cancelation) => {
-				if (trips[i].TripStartTime) {
-					const number = Number(trips[i].TripStartTime.replace(/:/g, "")) - Number(cancelation.trip_start.replace(/:/g, ""))
+				if (trip.TripStartTime) {
+					const number = Number(trip.TripStartTime.replace(/:/g, "")) - Number(cancelation.trip_start.replace(/:/g, ""))
 					if (cancelation.route === obj.RouteNo && (number >= 0 && number < 5)) {
 						return true
 					}
 				}
 			}).length
-			//console.log("cancel", route_cancl)
-
-			tm_arr.push({
+			
+			return {
 				no: obj.RouteNo,
 				heading: obj.RouteHeading,
-				destination: trips[i].TripDestination,
+				destination: trip.TripDestination,
 				time: {
-					mins: trips[i].AdjustedScheduleTime,
-					hhmm: DateTime.now().setZone(zone).plus({ minutes: trips[i].AdjustedScheduleTime }).toFormat("HH:mm"),
-					adjustedTime: trips[i].AdjustedScheduleTime,
-					adjustmentAge: trips[i].AdjustmentAge,
-					tripStartTime: trips[i].TripStartTime,
+					hhmm: DateTime.now().setZone(zone).plus({ minutes: trip.AdjustedScheduleTime }).toFormat("HH:mm"),
+					adjustedStopTime: Number(trip.AdjustedScheduleTime),
+					variation: Number(trip.AdjustmentAge),
+					tripStartTime: trip.TripStartTime,
 				},
 				direction: obj.DirectionID,
 				canceled: (function () {
-					//console.log(route_cancl)
 					return route_cancl !== 0
 				})(),
-				geo: (trips[i].Latitude !== undefined && trips[i].Latitude !== ""),
-				longitude: trips[i].Longitude,
-				latitude: trips[i].Latitude,
-				lastTrip: trips[i].LastTripOfSchedule,
-				//gtfs: await route_helper.get(obj.RouteNo, "oct"),
-			})
-		}
-		return
+				geo: (trip.Latitude !== undefined && trip.Latitude !== ""),
+				longitude: trip.Longitude,
+				latitude: trip.Latitude,
+				lastTrip: trip.LastTripOfSchedule,
+			}
+		})
 	}
-	const rt = await ocrealtime()
-	console.log(rt.error)
+	const rt = await createAPIResponse()
+	console.log("error", rt.error)
 	
 	return new Response(
 		JSON.stringify(rt),

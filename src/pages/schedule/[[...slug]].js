@@ -4,11 +4,11 @@ import route_css from "../../styles/routes.module.css"
 import schedule_css from "../../styles/schedule.module.css"
 import 'material-icons/iconfont/material-icons.css'
 import config from "../../../config.json"
-const gtfs_rt = config.gtfs_rt 
+const gtfs_rt = config.gtfs_rt
 
 export default function Home(data) {
     //console.log("data", data)
-  
+
     if (data.error) {
         return (
             <div>
@@ -104,7 +104,7 @@ export default function Home(data) {
             return schedule.map((x, index) => {
                 //console.log(x)
                 return (
-                    
+
                     <div className={schedule_css.arrv} id={"tp-arrv_" + x.trip_id} key={"index-" + index}>
                         <span className={route_css.route_spn} /*style={{ backgroundColor: cag(data.agency).styles.primary }}*/>{x.route}</span> <p className={schedule_css.arrv_txt}>{x.trip_headsign}</p>
                         <p id={"tp-p_" + x.trip_id}>{x.attribute} {x.arrv}</p>
@@ -131,7 +131,7 @@ export default function Home(data) {
             return (<div className={schedule_css.realtime_msg}><input type="time" id="gtfshr" onChange={() => updateTime()} defaultValue={htmltime} /><p>Updates Unavailable</p></div>)
         }
     }
-  
+
     function onload() {
         if (process.browser) {
             const r = document.querySelector(":root")

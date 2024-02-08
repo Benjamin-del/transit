@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
     if (!time || !route || !dirid) {
         return new Response(
-            JSON.stringify({ message: 'Missing required parameters' }),
+            JSON.stringify({ error: 400, message: 'Missing required parameters' }),
             {
                 status: 400,
                 headers: {

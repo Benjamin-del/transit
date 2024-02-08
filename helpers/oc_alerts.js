@@ -36,7 +36,7 @@ export default {
             return item.category.includes("Cancelled trips") /*&& route.includes(item.title.split(" ")[0])*/
         }).map((item) => {
             const times = [...item.description.matchAll(regexp)]
-            console.log("Times", times)
+            //console.log("Times", times)
            return {
                 route: item.title.split(" ")[0],
                 trip_start: times[0][0] || undefined,
