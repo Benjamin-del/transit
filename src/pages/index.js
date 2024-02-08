@@ -6,6 +6,7 @@ import Head from 'next/head';
 import 'material-icons/iconfont/material-icons.css'
 import { useRouter } from 'next/router'
 import { DateTime } from 'luxon';
+import Link from 'next/link'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_KEY;
 
@@ -322,7 +323,7 @@ export default function Home({ update }) {
                 </div>
                 <div>
                     <a href='https://github.com/Benjamin-Del/transit'><p>Benja Transit v3.0.5</p></a>
-                    <a href="/notices"><p>Open Data</p></a>
+                    <Link href="/notices"><p>Open Data</p></Link>
                 </div>
             </div>
             // If data is error, show error screen
