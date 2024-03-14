@@ -43,10 +43,12 @@
   /*padding: 0.5vh; */
   border-radius: 1vh;
 }
+
 .arrv_elem p {
   width: 100%;
   padding: 0.5vh;
 }
+
 .route_span {
   color: white;
   padding-inline: 1vh;
@@ -62,6 +64,7 @@
   flex-wrap: wrap;
   flex-direction: row;
 }
+
 .sidebar_header {
   height: 7vh;
   background: white;
@@ -72,6 +75,7 @@
 .marker {
   color: #004777;
 }
+
 .search_btn {
   color: #004777;
   border-bottom: 1px solid;
@@ -80,10 +84,12 @@
 .search_ipt {
   border-bottom: 1px solid #004777;
 }
+
 .arrv_scroll_5 {
   overflow-x: scroll;
   height: 85vh;
 }
+
 .share {
   display: block;
   background: #004777;
@@ -94,6 +100,7 @@
   text-align: center;
   width: 100%;
 }
+
 .share_pad {
   display: block;
   background: #004777;
@@ -105,6 +112,7 @@
   /* width: 100%; */
   margin-inline: 2vh;
 }
+
 .share_sm {
   display: block;
   background: #004777;
@@ -115,6 +123,7 @@
   text-align: center;
   /*width: 100%;*/
 }
+
 .button {
   display: block;
   background: #004777;
@@ -125,6 +134,7 @@
   border: none;
   text-align: center;
 }
+
 .button_flex {
   display: flex;
   flex-direction: row;
@@ -132,10 +142,12 @@
   gap: 10px;
   padding-inline: 1vh;
 }
+
 .schd_a {
   flex: none;
   width: 90%;
 }
+
 .error {
   display: flex;
   flex-direction: column;
@@ -174,6 +186,7 @@
   width: 100%;
 
 }
+
 .headsign {
   display: flex;
   width: 100%;
@@ -188,12 +201,14 @@
 .logo {
   margin: auto;
 }
+
 .multi_span {
   display: flex;
   width: 100%;
   flex-direction: row;
   justify-content: space-around;
 }
+
 @media screen and (max-width: 768px) {
   .main_content {
     display: flex;
@@ -245,15 +260,17 @@
     height: 80%;
     flex: none;
     background: #efefef;
-    padding: 1vh;
-   }
+    /*padding: 1vh;*/
+  }
 
   .error {
     width: 100%;
   }
+
   .logo {
     display: none;
   }
+
   .no_content {
     height: 25vh;
     display: flex;
