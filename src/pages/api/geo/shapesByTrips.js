@@ -23,8 +23,6 @@ export default async function handler(req, res) {
     const fts = []
     
     function cachedTrips(tripId) {
-        //console.log(tripId)
-        //route_id,service_id,trip_id,trip_headsign,direction_id,shape_id
         return tps.filter((x) => {
             return x.split(",")[2] === tripId
         }).map((x) => {

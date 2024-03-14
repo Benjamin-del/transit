@@ -37,3 +37,6 @@ next-env.d.ts
 .vercel
 
 .vercel
+
+# Private Folder
+/private

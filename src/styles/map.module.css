@@ -40,19 +40,28 @@
   margin: 1vh;
   /* border-bottom: 1px solid #004777; */
   background: #efefef;
-  padding: 0.5vh;
+  /*padding: 0.5vh; */
   border-radius: 1vh;
 }
 .arrv_elem p {
   width: 100%;
+  padding: 0.5vh;
 }
-.arrv_elem span:not(.material-icons-outlined) {
-  background: #004777;
+.route_span {
   color: white;
   padding-inline: 1vh;
   border-radius: 1vh;
+  border: 1px solid;
 }
 
+.mpx_popupCtn {
+  font-size: 1.7vh;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-direction: row;
+}
 .sidebar_header {
   height: 7vh;
   background: white;
@@ -170,6 +179,10 @@
   width: 100%;
   gap: 1vh;
   align-items: center;
+  background: #004777;
+  color: white;
+  border-radius: 1vh 1vh 0vh 0vh;
+  padding: 0.5vh;
 }
 
 .logo {
@@ -227,6 +240,7 @@
     flex-wrap: wrap;
     margin: 1vh;
     border-radius: 1vh;
+    color: black;
     /*width: 25vh;*/
     height: 80%;
     flex: none;

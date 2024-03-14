@@ -11,6 +11,7 @@ export const config = {
 
 export default async function handler(req, res) {
 	const params = new URL(req.url).searchParams
+	// This is going to get all of the bus cancelations in the city, so that it can guess if it will be canceled.
 	const cancelations = await oc_alerts.allCancels()
 
 	//console.log("cancels", cancelations)
@@ -29,6 +30,7 @@ export default async function handler(req, res) {
 	console.log("DYNAMIC/OCT_REALTIME:" + stopid + " oct")
 	async function code2id(code) {
 		// Transforms GTFS stop ID to OCTranspo stop ID (used in 560-560)
+		// Why couldn't they just use the same ID?
 		const list = await gtfs.download("stops.txt", "oct")
 		//console.log(list)
 		for (var i = 0; i < list.length; i++) {
@@ -51,14 +53,9 @@ export default async function handler(req, res) {
 		// OCtranspo API is weird, sometimes it returns an array, sometimes it returns an object???
 		if (JSON.stringify(objorarr).split("")[0] === "{") {
 			//Cheating, but typeof returns object for both arrays and objects
-			console.log("input", objorarr)
-			console.log("Converting to array")
-			console.log("output", [objorarr])
 			return [objorarr]
 			// It's an object, so I'm going to make it an array
 		} else {
-			console.log("Not to array")
-			console.log(objorarr)
 			return objorarr
 			// Yay! It's an array!
 		}
@@ -70,7 +67,7 @@ export default async function handler(req, res) {
 		// Convert ID (GTFS) To Code (OC API)
 		try {
 			const data = await fetch("https://api.octranspo1.com/v2.0/GetNextTripsForStopAllRoutes?appID=87c88940&apiKey=6ef18ce1eff8c5741812b6814766b7e0&format=JSON&stopNo=" + code)
-			// The content-type header on the OC API is set to HTML. This parses the data as text, and then converts it to JSON.
+			// The content-type header on the OC API is set to text/html, so it means that response.json() won't work.
 			const response = await data.text()
 			//console.log(response)
 			if (response.includes("<h4>") || response.includes("<html>")) {
@@ -113,24 +110,33 @@ export default async function handler(req, res) {
 			})
 
 			return { arrivals: tmSt, stop: stp_inf, /*cancelations: cancelations */ };
+			// Let's not return all cancelations, as it's not needed.
 		}
 	}
 	async function geoJsonCollect(obj) {
-
-		// If there is only one route that serves the stop, the api returns {Trips: {Trip: [array]}}, but if there is multiple routes it returns {Trips: [array]}
+		// Let's make sure that the data is in a stable and usable format... How hard should it be?
+		// If there is only one route that serves the stop, the api returns {Trips: {Trip: [array]}}, but if there is multiple routes it returns {Trips: [array]} or {Trips: Object}
 		// This behavior is not documented in the API documentation, and is very annoying It should also not be happening on a production server!.
 		const multiTrip = (function () {
+			//console.log("tripsObj", obj.Trips)
 			if (Array.isArray(obj.Trips)) {
+				console.log("Array")
 				return obj.Trips
 				// This is what it should be doing
 			} else {
-				return obj.Trips.Trip
-				// This is not OK!
+				console.log("Object")
+				if (obj.Trips.Trip) {
+					return obj.Trips.Trip
+				} else {
+					return [obj.Trips]
+					// This happens when there is only one route and the API returns {trips: {OBJECT}} instead of {trips: {Trip: [ARRAY], 
+				}
+				// This is not OK! This should be OC's Side, not mine!
 			}
-			// I am not going to be using the conversion function, as it can cause some problems.
+			// I am going to use this instead of objToArray, as sometimes it can mess up. 
 		})()
 		return multiTrip.map((trip) => {
-			console.log(trip)
+			//console.log(trip)
 			// Logic to decide if the trip has a high likleyhood of being canceled.
 			const route_cancl = cancelations.filter((cancelation) => {
 				if (trip.TripStartTime) {

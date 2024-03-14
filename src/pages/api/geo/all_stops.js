@@ -37,6 +37,7 @@ export default async function handler(req,res) {
         const fc = turf.featureCollection(mp.map((x) => {
             return turf.point([x.stop_lon, x.stop_lat], { stop_id: x.stop_id, stop_code: x.stop_code, stop_name: x.stop_name, agency: x.agency })
         }))
+        console.log("GEO/ALL_STOPS: DONE")
         return new Response(JSON.stringify(fc), {
             status: 200,
             headers: {

@@ -139,3 +139,7 @@ textarea {
 }
 
 input { -webkit-border-radius: 0; }
+
+.mapboxgl-popup-content {
+  color: black;
+}

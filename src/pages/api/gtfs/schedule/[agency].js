@@ -35,7 +35,7 @@ export default async function handler(req, res) {
             },
         });
     }
-
+    const eod = DateTime.now().setZone(zone).endOf('day')
     //console.log("now:", now)
     const gtfsdt_lx = (function () {
         if (params.get("date") && params.get("date") !== "undefined") {
@@ -59,9 +59,19 @@ export default async function handler(req, res) {
     })()
     const gtfshr = Number(param_gtfshr.toFormat('HHmmss'))
     // Saving it as this format so I can use it later
-    const gtfsmx = Number(param_gtfshr.plus({ minutes: Number(params.get("plus")) || 180 /* 3 hours (default) */ }).toFormat('HHmmss'))
 
-    //const list = await gtfs.download("calendar_dates.txt", ag)
+    const gtfsmx = (function () {
+        const defPlus = 180 || params.get("plus") // 3 hours (default)
+        
+        const eodDiff = eod.diff(param_gtfshr).as('minutes')
+        console.log("defPlus", defPlus)
+        console.log("eodDiff", eodDiff)
+        if (eodDiff < defPlus) {
+            return Number(eod.toFormat('HHmmss'))
+        } else {
+            return Number(param_gtfshr.plus({ minutes: Number(defPlus) }).toFormat('HHmmss'))
+        }
+    })()
 
     async function acceptabledate() {
         if (ag === "oct" || ag === "via") {
@@ -82,9 +92,6 @@ export default async function handler(req, res) {
         const dts = x.split(",")
         if (dts[2] === stopid) {
             const arrv = Number(dts[1].replace(/:/g, ""))
-            //console.log(arrv > gtfshr, "-", arrv, gtfshr)
-            //trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled,timepoint
-            //trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
 
             if (arrv > gtfshr && arrv < gtfsmx) {
                 return true
@@ -112,7 +119,7 @@ export default async function handler(req, res) {
             //Filter Trips
             const dts = y.split(",")
             //console.log(accdays.includes(dts[1]))
-            
+
             if (dts[2] === x.id && accdays.includes(dts[1])) {
 
                 ftldtps.push({
@@ -123,20 +130,20 @@ export default async function handler(req, res) {
                     trip_id: dts[2],
                     trip_headsign: dts[3].replace(/\"/g, ""),
                     dir: dts[4],
-                    shape: dts[5],
+                    shape: dts[5].replace("\r", ""),
                     //gtfs: await routes(dts[0])
                 })
             }
         })
     })
 
-    
+
     return new Response(JSON.stringify({
         query: {
             time: gtfshr,
             date: gtfsdt,
             stop: stopid,
-            agency: ag.replace("oct","OC Transpo"),
+            agency: ag.replace("oct", "OC Transpo"),
             accdays: accdays,
             gtfsmx: gtfsmx,
             realtime_support: (function () {
