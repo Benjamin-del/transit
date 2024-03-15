@@ -106,7 +106,7 @@ export default async function handler(req, res) {
 			}
 			//Flatten the array of arrays & Sort by arrival time
 			const tmSt = tm_arr.flat().sort((a, b) => {
-				return a.time.adjustedTime - b.time.adjustedTime
+				return a.time.adjustedStopTime - b.time.adjustedStopTime
 			})
 
 			return { arrivals: tmSt, stop: stp_inf, /*cancelations: cancelations */ };

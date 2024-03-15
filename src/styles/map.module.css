@@ -283,6 +283,11 @@
 
 .canceled {
   background: #FF7700;
-  padding: 1vh;
+  /*padding: 1vh; */
   color: white;
+}
+
+.canceled p {
+  width: 100%;
+  padding: 0.5vh;
 }
