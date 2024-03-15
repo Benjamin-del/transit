@@ -50,7 +50,8 @@
 }
 
 .route_span {
-  color: #004777;
+  background: #004777;
+  color: white;
   padding-inline: 1vh;
   border-radius: 1vh;
   border: 1px solid;
