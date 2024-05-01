@@ -1,9 +1,8 @@
 import { DateTime } from "luxon";
 
-import helper_stops from "../../../../../helpers/stops"
-import helper_days from "../../../../../helpers/acc_days"
 import gtfs from "../../../../../helpers/fetch_gtfs"
-import gtfs_config from "../../../../../config.json"
+import helper_days from "../../../../../helpers/acc_days"
+import helper_stops from "../../../../../helpers/stops"
 
 // Using to parse dates and to ensure I don't have to deal with timezones
 const zone = "America/Toronto"
@@ -16,6 +15,8 @@ export default async function handler(req, res) {
     const stopid = params.get("stop")
     const ag = pathname.split("/")[4]
 
+    const eod = DateTime.now().setZone(zone).endOf('day')
+
     if (!stopid || !ag) {
         console.log("GTFS/SCHEDULE: Missing required parameters")
         return new Response(JSON.stringify({ error: "Missing required parameters" }), {
@@ -26,7 +27,7 @@ export default async function handler(req, res) {
         });
     }
     console.log("GTFS/SCHEDULE:" + stopid + " " + ag)
-    const stop = await helper_stops.get(stopid, ag)
+    /*const stop = await helper_stops.get(stopid, ag)
     if (!stop) {
         return new Response(JSON.stringify({ error: "404" }), {
             status: 404,
@@ -34,109 +35,95 @@ export default async function handler(req, res) {
                 'content-type': 'application/json',
             },
         });
-    }
-    const eod = DateTime.now().setZone(zone).endOf('day')
+    }*/
     //console.log("now:", now)
-    const gtfsdt_lx = (function () {
-        if (params.get("date") && params.get("date") !== "undefined") {
-            // If paramater is set, Return a date beased on that time (00:00:00)
-            return DateTime.fromFormat(params.get("date"), 'yyyyMMdd').setZone(zone).set({ hour: 0, minute: 0, second: 0, millisecond: 0 })
-        } else {
-            // If not return today (00:00:00)
-            return DateTime.now().setZone(zone).set({ hour: 0, minute: 0, second: 0, millisecond: 0 })
-        }
-    })()
-    const gtfsdt = Number(gtfsdt_lx.toFormat('yyyyMMdd'))
+    const currentDateParam = params.get("date");
+    const currentTimeParam = params.get("time");
+    const currentDateTime = DateTime.now().setZone(zone);
 
-    const param_gtfshr = (function () {
-        // I am going to refrence it later so I will return the full DateTime object
-        if (params.get("time") && params.get("time") !== "undefined") {
-            const paramSplit = params.get("time").split(":")
-            return DateTime.now().setZone(zone).set({ hour: paramSplit[0], minute: paramSplit[1], second: 0, millisecond: 0 })
-        } else {
-            return DateTime.now().setZone(zone)
-        }
-    })()
-    const gtfshr = Number(param_gtfshr.toFormat('HHmmss'))
-    // Saving it as this format so I can use it later
+    const gtfsdt_lx = currentDateParam && currentDateParam !== "undefined"
+        ? DateTime.fromFormat(currentDateParam, 'yyyyMMdd').setZone(zone).startOf('day')
+        : currentDateTime.startOf('day');
+    const gtfsdt = Number(gtfsdt_lx.toFormat('yyyyMMdd'));
 
-    const gtfsmx = (function () {
-        const defPlus = 180 || params.get("plus") // 3 hours (default)
-        
-        const eodDiff = eod.diff(param_gtfshr).as('minutes')
-        console.log("defPlus", defPlus)
-        console.log("eodDiff", eodDiff)
-        if (eodDiff < defPlus) {
-            return Number(eod.toFormat('HHmmss'))
-        } else {
-            return Number(param_gtfshr.plus({ minutes: Number(defPlus) }).toFormat('HHmmss'))
-        }
-    })()
+    const param_gtfshr = currentTimeParam && currentTimeParam !== "undefined"
+        ? currentDateTime.set({ hour: currentTimeParam.split(":")[0], minute: currentTimeParam.split(":")[1], second: 0, millisecond: 0 })
+        : currentDateTime;
+    const gtfshr = Number(param_gtfshr.toFormat('HHmmss'));
 
-    async function acceptabledate() {
-        if (ag === "oct" || ag === "via") {
+    const defPlus = params.get("plus") || 180; // 3 hours (default)
+    const eodDiff = eod.diff(param_gtfshr).as('minutes');
+    const gtfsmx = Number((eodDiff < defPlus ? eod : param_gtfshr.plus({ minutes: Number(defPlus) })).toFormat('HHmmss'));
+
+    async function acceptabledate(ag) {
+        if (ag === "oct") {
             return await helper_days.cal(ag, gtfsdt_lx)
         } else if (ag === "sto") {
             return await helper_days.cal_dates(ag, gtfsdt_lx)
         }
     }
-
     // Load all of the files
-    const tms = await gtfs.download("stop_times.txt", ag)
-    const tps = await gtfs.download("trips.txt", ag)
+    const [tms, tps, accdays] = await Promise.all([
+        gtfs.download("stop_times.txt", ag),
+        gtfs.download("trips.txt", ag),
+        acceptabledate(ag)
+    ]);
 
-    const accdays = await acceptabledate()
-    console.log("days", accdays)
-    const accrx = new RegExp(accdays.join("|"))
+    const accdaysSet = new Set(accdays);
+
+    //console.log("days", accdays)
+    //const accrx = new RegExp(accdays.join("|"))
+
     const ftldtms = tms.filter((x) => {
         const dts = x.split(",")
         if (dts[2] === stopid) {
             const arrv = Number(dts[1].replace(/:/g, ""))
-
+            //console.log(dts)
             if (arrv > gtfshr && arrv < gtfsmx) {
+                // Return if the time is between the start and end time
                 return true
             }
             //return true
         }
     }).map(x => {
-        return { id: x.split(",")[0], arrv: x.split(",")[1] }
-    })
+        const split = x.split(",");
+        return { id: split[0], arrv: split[1] };
+    });
+    
     const ftldtps = []
     function compare(a, b) {
-        if (Number(a.arrv.replace(/:/g, "")) < Number(b.arrv.replace(/:/g, ""))) {
-            return -1;
-        }
-        if (Number(a.arrv.replace(/:/g, "")) > Number(b.arrv.replace(/:/g, ""))) {
-            return 1;
-        }
-        return 0;
+        const aArrv = Number(a.arrv.replace(/:/g, ""));
+        const bArrv = Number(b.arrv.replace(/:/g, ""));
+
+        return aArrv - bArrv;
     }
-    console.log(ftldtms)
-    console.log(accrx)
-    ftldtms.forEach(async (x) => {
-        // Filter Times
-        tps.filter(async (y) => {
-            //Filter Trips
-            const dts = y.split(",")
-            //console.log(accdays.includes(dts[1]))
+    //console.log("1", ftldtms)
+    //console.log("2", accrx)
+    // Convert tps into a map
+    const tpsMap = new Map();
+    tps.forEach((y) => {
+        const dts = y.split(",");
+        tpsMap.set(dts[2], dts);
+    });
 
-            if (dts[2] === x.id && accdays.includes(dts[1])) {
-
-                ftldtps.push({
-                    route: dts[0],
-                    service_id: dts[1],
-                    arrv: x.arrv,
-                    attribute: "Scheduled at:",
-                    trip_id: dts[2],
-                    trip_headsign: dts[3].replace(/\"/g, ""),
-                    dir: dts[4],
-                    shape: dts[5].replace("\r", ""),
-                    //gtfs: await routes(dts[0])
-                })
-            }
-        })
-    })
-
+    // Use the map in the ftldtms loop
+    ftldtms.forEach((x) => {
+        const dts = tpsMap.get(x.id);
+        if (dts && accdaysSet.has(dts[1])) {
+            //route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id
+            ftldtps.push({
+                route: dts[0],
+                service_id: dts[1],
+                arrv: x.arrv,
+                attribute: "Scheduled at:",
+                trip_id: dts[2],
+                trip_headsign: dts[3].replace(/\"/g, ""),
+                dir: dts[4],
+                block: dts[5],
+                shape_id: dts[6].replace("\r", ""),
+            });
+        }
+    });
 
     return new Response(JSON.stringify({
         query: {
@@ -146,13 +133,6 @@ export default async function handler(req, res) {
             agency: ag.replace("oct", "OC Transpo"),
             accdays: accdays,
             gtfsmx: gtfsmx,
-            realtime_support: (function () {
-                if (ag.includes(gtfs_config.gtfs_rt)) {
-                    return true
-                } else {
-                    return false
-                }
-            })(),
             realtime: false
         },
         stop: await helper_stops.get(stopid, ag) || null,

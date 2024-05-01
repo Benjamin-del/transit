@@ -32,12 +32,14 @@ export default async function handler(req, res) {
     }).map((x) => {
         const dts = x.split(",")
         return {
+             //route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id
             route: dts[0],
             service_id: dts[1],
             trip_id: dts[2],
             trip_headsign: dts[3].replace(/\"/g, ""),
             dir: dts[4],
-            shape: dts[5].replace("\r", "")
+            block_id: dts[5],
+            shape: dts[6].replace("\r", "")
         }
     })[0]
     const now = Number(DateTime.now().setZone("America/Toronto").toFormat("HHmmss"))
@@ -51,14 +53,15 @@ export default async function handler(req, res) {
         //tripid,arrival_time,stop_id,stop_sequence
 
         const stop = stops.filter((y) => {
-            //stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type
             return y.split(",")[0] === dts[2]
         }).map((y) => {
+            const dts = y.split(",")
             return {
-                id: y.split(",")[0],
-                code: y.split(",")[1],
-                name: y.split(",")[2].replace(/\"/g, ""),
-                geo: [Number(y.split(",")[5]), Number(y.split(",")[4])],
+                //stop_id,stop_code,stop_name,stop_lat,stop_lon
+                id: dts[0],
+                code: dts[1],
+                name: dts[2].replace(/\"/g, ""),
+                geo: [Number(dts[3]), Number(dts[4])],
                 currentStop: queryStop === y.split(",")[0]
             }
         })[0]

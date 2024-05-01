@@ -22,12 +22,13 @@ export default async function handler(req,res) {
                 }
             }).map((y) => {
                 const dts = y.split(",")
+                //stop_id,stop_code,stop_name,stop_lat,stop_lon
                 return {
                     stop_id: dts[0],
                     stop_code: dts[1],
                     stop_name: dts[2].replace(/\"/g, ""),
-                    stop_lat: Number(dts[4]),
-                    stop_lon: Number(dts[5]),
+                    stop_lat: Number(dts[3]),
+                    stop_lon: Number(dts[4]),
                     agency: x,
                 }
             })

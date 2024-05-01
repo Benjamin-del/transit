@@ -108,15 +108,54 @@ export default function Home({ update }) {
             }
         }
 
+        //If Hash Params (stop, agency, and type) are present, load the data
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        if (hashParams.has('type') && hashParams.has('agency') && hashParams.has('stop')) {
+            setAgency(hashParams.get('agency'))
+            setStop(hashParams.get('stop'))
+
+            if (hashParams.get('type') === "realtime" || hashParams.get('type') === "static") {
+                setData({ data: "loading", type: null })
+            } else if (hashParams.get('type') === "route" && hashParams.has('route')) {
+                // Load Trip Info
+                getTripInfo(hashParams.get('agency'), hashParams.get('route'), hashParams.get('stop'))
+            }
+        }
+
         // Clean up on unmount
         return () => map.current.remove();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (!agency || !stop) return
-        configStatSched(agency, stop)
+
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        if (!hashParams.has('type') && !hashParams.get('type') === "route" && !hashParams.has('route')) {
+            configStatSched(agency, stop, (hashParams.get('type') === "realtime")) // Igonore If we are looking for route
+
+        }
     }, [agency, stop]);
 
-    function configStatSched(agency, stop) {
+    function configStatSched(agency, stop, request_realtime) {
+        // Add to URL hash Stop ID & Ageny
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+
+        // Update agency and stop parameters
+        hashParams.set('agency', agency);
+        hashParams.set('stop', stop);
+        hashParams.delete('route') /* Remove Route ID */
+        if (!request_realtime) {
+            hashParams.set('type', "static");
+        }
+        // Manually construct the hash string
+        let hashString = '';
+        for (let [key, value] of hashParams) {
+            if (hashString !== '') hashString += '&';
+            hashString += `${key}=${value}`;
+        }
+
+        // Set the hash with the updated parameters
+        window.location.hash = hashString;
+
         fetch("/api/gtfs/schedule/" + agency + "?stop=" + stop)
             .then((response) => response.json())
             .then((data) => {
@@ -130,12 +169,25 @@ export default function Home({ update }) {
                 // Set data, Tell them it is a static schedule
                 setData({ data: data, type: "static" })
                 resetMarkers()
+                console.log(data.stop)
                 map.current.flyTo({
                     center: [data.stop.stop_lon, data.stop.stop_lat],
                     zoom: 16,
                     essential: true // this animation is considered essential with respect to prefers-reduced-motion
                 });
-    
+                return { data: data, type: "static" }
+            })
+            .then((data) => {
+
+                console.log("DATA RT", data)
+                if (request_realtime) {
+                    console.log("Requested Realtime")
+                    const tripList = data.data.schedule.map((x) => {
+                        return x.trip_id
+                    }).join(",")
+
+                    requestRealtime(tripList, agency, stop, data)
+                }
             })
 
     }
@@ -251,7 +303,7 @@ export default function Home({ update }) {
         map.current.on('click', 'bus_stop', (e) => {
             const coordinates = e.features[0].geometry.coordinates.slice();
             redirStop(e.features[0].properties.stop_id, e.features[0].properties.agency)
-
+            resetMarkers()
             while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
                 coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
             }
@@ -353,18 +405,21 @@ export default function Home({ update }) {
                                         essential: true // this animation is considered essential with respect to prefers-reduced-motion
                                     });
                                 }
-                                if (agency === "oct") {
+                                /*if (agency === "oct") {
                                     // Special Context to guess Trip ID (OC Transpo RT ONLY)
                                     getContext(schedule.tripStartTime, schedule.route, schedule.dir)
                                     // This will call addRoute() when it is done
                                 } else {
-                                    addRoute(schedule.trip_id, agency)
-                                }
+                                    addRoute(schedule.shape_id, agency)
+                                }*/
+                                // GTFS-RT Yay!
+                                addRoute(schedule.shape_id, agency)
                             } else {
                                 // Add Route Directly since we have the Trip ID already
                                 //addRoute(schedule.trip_id, agency)
+                                console.log("schedule", schedule)
                                 getTripInfo(agency, schedule.trip_id, stop)
-                                addRoute(schedule.trip_id, agency)
+                                addRoute(schedule.shape_id, agency)
                             }
                         }} key={schedule.trip_id || "NOKEY_" + Math.random()}><div className={styleArr.join(" ")} >
                                 <div className={map_css.headsign}>
@@ -411,7 +466,7 @@ export default function Home({ update }) {
                                 }()}</span>
                             </a>
 
-                            <a className={map_css.share} onClick={() => requestRealtime(tripmap, agency, data.stop.stop_id)}>
+                            <a className={map_css.share} onClick={() => requestRealtime(tripmap, agency, data.stop.stop_id, data)}>
                                 <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>{function () {
                                     if (info.type === "realtime") {
                                         return "refresh"
@@ -420,15 +475,10 @@ export default function Home({ update }) {
                                     }
                                 }()}</span>
                             </a>
-                            <a className={map_css.share} href={function () {
-                                if (agency === "sto") {
-                                    return "/schedule/sto/" + data.stop.stop_id + "?realtime=true"
-                                } else {
-                                    return "/schedule/" + agency + "/" + data.stop.stop_id
-                                }
-                            }()}>
+                            <a className={map_css.share} href={"/schedule/sto/" + data.stop.stop_id + "?realtime=true"}>
                                 <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>departure_board</span>
                             </a>
+
                         </div>
                     } else /*if (info.type === "realtime")*/ {
                         return <div className={map_css.button_flex}><a className={map_css.share_sm} onClick={() => resetData()}><span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>clear</span></a><a className={map_css.button} href={"/schedule/" + agency.replace("oct", "octranspo") + "/" + stop}>View Schedule</a></div>
@@ -439,6 +489,21 @@ export default function Home({ update }) {
     }
     async function getTripInfo(agency, trip, stop) {
         setData({ data: "loading", type: null })
+
+        // Set URL Hash
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        hashParams.set('type', "route");
+        hashParams.set('route', trip);
+        // Manually construct the hash string
+        let hashString = '';
+        for (let [key, value] of hashParams) {
+            if (hashString !== '') hashString += '&';
+            hashString += `${key}=${value}`;
+        }
+
+        // Set the hash with the updated parameters
+        window.location.hash = hashString;
+
         const request = await fetch("/api/gtfs/trips/" + agency + "?trip=" + trip + "&stop=" + stop)
         const response = await request.json()
         console.log(response)
@@ -515,8 +580,9 @@ export default function Home({ update }) {
                 <button onClick={() => search()} className={map_css.search_btn}>Search</button>
             </div>
             <div>
-                <a href='https://github.com/Benjamin-Del/transit'><p>Benja Transit v3.0.6</p></a>
+                <a href='https://github.com/Benjamin-Del/transit'><p>Benja Transit v3.1</p></a>
                 <Link href="/notices"><p>Open Data</p></Link>
+                <Link href="/search"><p>GTFS Query</p></Link>
             </div>
         </div>
     }
@@ -547,121 +613,54 @@ export default function Home({ update }) {
             resetData()
         }
     }
-    function requestRealtime(trip_id, agency, stopID) {
+    function requestRealtime(trip_id, agency, stopID, svdData) {
+        console.log(trip_id)
         setData({ data: "loading", type: null })
-        if (agency === "oct") {
-            // OC Transpo Uses a custom API, so we need to return a different API
-            fetch("/api/dynamic/oct_realtime?stop=" + stopID)
-                .then((response) => response.json())
-                .then((data) => { /* Map the Data */
-                    console.log("Realtime", data)
-                    if (data.error) {
-                        console.log("Error :(")
-                        return { error: data }
-                    }
-                    if (!data.arrivals) {
-                        return []
-                    }
-                    return data.arrivals.filter((x) => {
-                        return x.time.adjustedStopTime
-                    }).map((x) => {
-                        const geoStatus = (function () {
-                            if (x.time.adjustedStopTime && x.time.adjustedStopTime < 15) {
-                                // If the bus is arriving in less than 15 minutes, display the minutes until arrival
-                                return "Arriving in "
-                            } else if (x.geo) {
-                                return "Arriving at:"
-                            } else {
-                                return "Scheduled at:"
-                            }
-                        })()
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
 
-                        const arrv = (function () {
-                            if (x.time.adjustedStopTime && x.time.adjustedStopTime < 15) {
-                                // If the bus is arriving in less than 15 minutes, display the minutes until arrival
-                                return x.time.adjustedStopTime + " mins"
-                            } else {
-                                return x.time.hhmm
-                            }
-                        })()
-                        console.log(x)
-                        return {
-                            route: x.no,
-                            service_id: null,
-                            arrv: arrv,
-                            adjustedStopTime: x.time.adjustedStopTime,
-                            attribute: geoStatus,
-                            trip_id: null,
-                            trip_headsign: x.destination || x.heading || "Missing Destination",
-                            dir: x.direction,
-                            canceled: x.canceled,
-                            tripStartTime: x.time.tripStartTime,
-                            shape: null,
-                            geo_status: x.geo,
-                            geo: {
-                                lat: x.latitude,
-                                lng: x.longitude
-                            }
-                        }
-                    })
-                })
-                .then((schedule) => {
-                    if (schedule.error) {
-                        console.log("Error :(")
-                        setData({ data: schedule.error, type: "error" })
-                        return []
-                    } else {
-                        console.log("Schedule", schedule)
-                        setData({ data: { schedule: schedule, stop: data.data.stop }, type: "realtime" })
-                        return schedule.filter((x) => { return x.geo_status === true })
-                    }
-                })
-                .then((geo) => {
-                    resetMarkers()
-                    console.log(geo)
-                    // Add Markers
-                    const newMarkers = []
-                    geo.forEach((x) => {
-                        const el = document.createElement('div');
-                        el.className = map_css.marker;
-                        el.innerHTML = "<span class='material-icons-round' style='font-size: 5vh;'>directions_bus</span>";
-                        el.addEventListener('click', () => {
-                            getContext(x.tripStartTime, x.route, x.dir)
-                        });
-                        console.log("positions:", x)
-                        //const popupHtml = <span className={map_css.route_span}>{x.route}</span>
-                        const popupHtml = <div className={map_css.mpx_popupCtn}><span className={map_css.route_span}>{x.route}</span><p>{x.trip_headsign}</p><p>{x.attribute} {x.arrv}</p></div>
-                        const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(renderToString(popupHtml));
-                        console.log(typeof popupHtml)
-                        newMarkers.push(new mapboxgl.Marker(el).setLngLat([x.geo.lng, x.geo.lat]).setPopup(popup).addTo(map.current))
-                    });
-                    setMarker(newMarkers)
+        // Update agency and stop parameters
+        hashParams.set('type', "realtime");
 
-                })
-        } else if (agency === "sto") {
-            // Lets Work with (Real) GTFS data now!
-            //console.log(trip_id)
-            fetch("/api/gtfs/vehicle/sto?trip=" + trip_id)
-                .then((response) => response.json())
-                .then((geo) => {
-                    // Add Markers
-                    resetMarkers()
-                    console.log(geo)
-                    const newMarkers = []
-                    geo.arrivals.forEach((x) => {
-                        // Create Markers
-                        const el = document.createElement('div');
-                        el.className = map_css.marker;
-                        el.innerHTML = "<span class='material-icons-round' style='font-size: 5vh; color: #FF7700'>directions_bus</span>";
-                        el.addEventListener('click', () => {
-                            addRoute(x.trip.trip_id, agency)
-                        });
-                        newMarkers.push(new mapboxgl.Marker(el).setLngLat([x.longitude, x.latitude]).addTo(map.current))
-                    })
-                    setData({ data: { schedule: data.data.schedule, stop: data.data.stop }, type: "realtime" })
-
-                })
+        // Manually construct the hash string
+        let hashString = '';
+        for (let [key, value] of hashParams) {
+            if (hashString !== '') hashString += '&';
+            hashString += `${key}=${value}`;
         }
+
+        // Set the hash with the updated parameters
+        window.location.hash = hashString;
+        fetch("/api/gtfs/vehicle/" + agency + "?trip=" + trip_id)
+            .then((response) => response.json())
+            .then((geo) => {
+                // Add Markers
+                resetMarkers()
+                console.log(geo)
+                const newMarkers = []
+                geo.arrivals.forEach((x) => {
+                    // Create Markers
+
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat([x.longitude, x.latitude])
+                        .setHTML('<h3>' + x.route + " " + x.trip.trip_headsign + '</h3><p>Bus: ' + x.vehicle.id + '</p>')
+                        .addTo(map.current);
+
+                    const el = document.createElement('div');
+                    el.className = map_css.marker;
+                    el.innerHTML = "<span class='material-icons-round' style='font-size: 5vh; color: #004777'>directions_bus</span>";
+                    el.addEventListener('click', () => {
+
+                        // Add Mapbox Popup
+                        console.log(x)
+                        addRoute(x.trip.shape_id, agency)
+                    });
+                    newMarkers.push(new mapboxgl.Marker(el).setLngLat([x.longitude, x.latitude]).setPopup(popup).addTo(map.current))
+                })
+                setMarker(newMarkers)
+                console.log("svdData", svdData)
+                setData({ data: { schedule: svdData.data.schedule, stop: svdData.data.stop }, type: "realtime" })
+
+            })
     }
     function resetMarkers() {
         console.log(marker)
@@ -677,7 +676,7 @@ export default function Home({ update }) {
         console.log("Markers Reset!")
         return
     }
-    function getContext(startTime, route, direction) {
+    /*function getContext(startTime, route, direction) {
         fetch("/api/dynamic/context?startTime=" + startTime + "&route=" + route + "&direction=" + direction)
             .then((response) => response.json())
             .then((data) => {
@@ -691,7 +690,7 @@ export default function Home({ update }) {
                     }).join(","), "oct")
                 }
             })
-    }
+    }*/
 
     function removeRoute() {
         if (map.current.getLayer("context_rt_lyr")) {
@@ -708,13 +707,13 @@ export default function Home({ update }) {
         }
         console.log("Removed Route!")
     }
-    function addRoute(trip_id, agency) {
+    function addRoute(shape_id, agency) {
         removeRoute()
 
         map.current.addSource('context_rt_src', {
             type: 'geojson',
             // Use a URL for the value for the `data` property.
-            data: '/api/geo/shapesByTrips?agency=' + agency + '&id=' + trip_id
+            data: '/api/geo/shape?agency=' + agency + '&id=' + shape_id
         });
 
         map.current.addLayer({

@@ -24,6 +24,7 @@ export default async function handler(req, res) {
     
     function cachedTrips(tripId) {
         return tps.filter((x) => {
+            //route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id
             return x.split(",")[2] === tripId
         }).map((x) => {
             const dts = x.split(",")
@@ -33,7 +34,8 @@ export default async function handler(req, res) {
                 trip_id: dts[2],
                 trip_headsign: dts[3].replace(/\"/g, ""),
                 dir: dts[4],
-                shape: dts[5].replace("\r", "")
+                block: dts[5],
+                shape: dts[6].replace("\r", "")
             }
         })[0]
     }
@@ -53,6 +55,7 @@ export default async function handler(req, res) {
         }).map((x) => {
             return [Number(x.split(",")[2]), Number(x.split(",")[1])]
         })
+        console.log(sqs)
         const ls = turf.lineString(sqs, trip_details)
         ls.properties.bbox = bbox(ls)
         fts.push(ls)

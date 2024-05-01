@@ -1,3 +1,7 @@
+/*
+OCTRANSPO API v2.0 - DEPRICATED
+*/
+
 import { DateTime } from "luxon";
 
 import gtfs from "../../../../helpers/fetch_gtfs"

@@ -1,5 +1,5 @@
 {
-    "gtfs_rt": ["sto"],
+    "gtfs_rt": ["sto", "oct"],
     "gtfs_st": ["oct","sto"],
     "styles": {
         "oct": {
@@ -15,18 +15,8 @@
                 "primary": "#33A948",
                 "secondary": "#007F89",
                 "text": "#FFFFFF"
-
             },
             "bg": "/images/oc_def_bg.png"
-        },
-        "via": {
-            "styles": {
-                "primary": "#FFCC00",
-                "secondary": "#3C3C3B",
-                "text": "#3C3C3B"
-
-            },
-            "bg": "/images/via_def_bg.png"
         }
     }
 }
