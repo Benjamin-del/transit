@@ -6,7 +6,7 @@ const gtfs_rt = config.gtfs_rt
 
 export default async function handler(req,res) {
     const agency = req.query.agency
-    if (!req.query.trip || !agency) {
+    if ((!req.query.trip && !req.query.route) || !agency) {
         console.log("GTFS/VEHICLE: Missing required parameters")
         res.status(400).json({ error: "Missing required parameters" })
         return
@@ -39,15 +39,18 @@ export default async function handler(req,res) {
         })[0]
     }
 
-    const trip = req.query.trip.split(",")
+    const trip = req.query.trip?.split(",") || []
+    const route = req.query.route?.split(",") || []
+
     const ent = feed.entity
         
     const ftld = ent.filter((x) => {
-        //console.log(x.vehicle.trip)
+        
+        console.log(x.vehicle)
         if (!x.vehicle.trip) {
             return false
         } else {
-            return trip.includes(x.vehicle.trip.tripId)
+            return trip.includes(x.vehicle.trip.tripId) || route.includes(x.vehicle.trip.routeId)
         }
     }).map((x) =>{
         console.log(x)

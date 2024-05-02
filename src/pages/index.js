@@ -15,10 +15,9 @@ export default function Home({ update }) {
     const mapContainerRef = useRef(null);
     const map = useRef();
 
-    const [agency, setAgency] = useState()
-    const [stop, setStop] = useState()
     const [data, setData] = useState({ data: null, type: null })
-    const [prevData, setPrevData] = useState({ data: null, type: null })
+    const [request, setRequest] = useState({stop: null, agency: null, type: null})
+
     const [marker, setMarker] = useState(null)
 
     // Create Control for custom button
@@ -111,41 +110,44 @@ export default function Home({ update }) {
         //If Hash Params (stop, agency, and type) are present, load the data
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         if (hashParams.has('type') && hashParams.has('agency') && hashParams.has('stop')) {
-            setAgency(hashParams.get('agency'))
-            setStop(hashParams.get('stop'))
-
-            if (hashParams.get('type') === "realtime" || hashParams.get('type') === "static") {
-                setData({ data: "loading", type: null })
-            } else if (hashParams.get('type') === "route" && hashParams.has('route')) {
-                // Load Trip Info
-                getTripInfo(hashParams.get('agency'), hashParams.get('route'), hashParams.get('stop'))
-            }
+            setRequest({ stop: hashParams.get('stop'), agency: hashParams.get('agency'), type: hashParams.get('type'), route: hashParams.get('route')})
         }
 
         // Clean up on unmount
         return () => map.current.remove();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
     useEffect(() => {
-        if (!agency || !stop) return
+        if (!request.agency || !request.type) return // Ignore if no request
 
+        // Get Hash paramaters
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        if (!hashParams.has('type') && !hashParams.get('type') === "route" && !hashParams.has('route')) {
-            configStatSched(agency, stop, (hashParams.get('type') === "realtime")) // Igonore If we are looking for route
-
+        setData({ data: "loading", type: null })
+        console.log("Request", request)
+        if (/*request.stop && */ request.agency && request.type) {
+            if (request.type === "stop" /* Replacing Realtime & Static info stop, will query for both */) {
+                console.log("Requesting Schedule/Realtime Data")
+                configStatSched(request.agency, request.stop)
+            } else if (request.type === "route") {
+                console.log("Requesting Trip Data")
+                getTripInfo(request.agency, request.route, (request.stop || hashParams.get('stop') || undefined))
+            } else {
+                console.log("Unknown Request Type", request.type)
+                setData({ data: "Unknown Request Type", type: error })
+            }
         }
-    }, [agency, stop]);
+    }, [request])
 
-    function configStatSched(agency, stop, request_realtime) {
+    async function configStatSched(agency, stop) {
         // Add to URL hash Stop ID & Ageny
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
 
         // Update agency and stop parameters
         hashParams.set('agency', agency);
         hashParams.set('stop', stop);
-        hashParams.delete('route') /* Remove Route ID */
-        if (!request_realtime) {
-            hashParams.set('type', "static");
-        }
+        hashParams.delete('route') /* Remove Route ID, if provided*/
+        hashParams.set('type', "stop");
+
         // Manually construct the hash string
         let hashString = '';
         for (let [key, value] of hashParams) {
@@ -156,10 +158,12 @@ export default function Home({ update }) {
         // Set the hash with the updated parameters
         window.location.hash = hashString;
 
-        fetch("/api/gtfs/schedule/" + agency + "?stop=" + stop)
+        // Replacing this with async function
+        
+       const staticData = await fetch("/api/gtfs/schedule/" + agency + "?stop=" + stop) // Fetch Static Data
             .then((response) => response.json())
             .then((data) => {
-                console.log("data1", data)
+                console.log("Static Data", data)
                 if (data.error) {
                     data.schedule = []
                     console.log("Error")
@@ -177,19 +181,45 @@ export default function Home({ update }) {
                 });
                 return { data: data, type: "static" }
             })
+        const uniqueRoutes = [...new Set(staticData.data.schedule.map((x) => x.route))].join(",")
+        console.log(uniqueRoutes) // Instead of going by trips param, I am going to go by route and have an ioption to view the trip on the sidebar (Implement Later)
+        if (uniqueRoutes === "") {
+            console.log("No Routes")
+            return
+        }
+        const realtimeData = await fetch("/api/gtfs/vehicle/" + agency + "?route=" + uniqueRoutes)
+            .then((response) => response.json())
             .then((data) => {
-
-                console.log("DATA RT", data)
-                if (request_realtime) {
-                    console.log("Requested Realtime")
-                    const tripList = data.data.schedule.map((x) => {
-                        return x.trip_id
-                    }).join(",")
-
-                    requestRealtime(tripList, agency, stop, data)
+                console.log("Realtime Data", data)
+                if (data.error) {
+                    console.log("Error")
+                    return
                 }
-            })
+                resetMarkers()
+                const newMarkers = []
+                data.arrivals.forEach((x) => {
+                    // Render React to String to add to popup
 
+                    // Create Markers
+
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat([x.longitude, x.latitude])
+                        .setHTML(('<div><h3>' + x.route + " " + x.trip.trip_headsign + '</h3><p>Bus: ' + x.vehicle.id + '</p></div>'))
+                        .addTo(map.current);
+
+                    const el = document.createElement('div');
+                    el.className = map_css.marker;
+                    el.innerHTML = "<span class='material-icons-round' style='font-size: 5vh; color: #004777'>directions_bus</span>";
+                    el.addEventListener('click', () => {
+                        console.log(x)
+                        addRoute(x.trip.shape_id, agency)
+                        setRequest({ stop: x.stop_id, agency: agency, type: "route", route: x.trip.trip_id })
+                    });
+                    newMarkers.push(new mapboxgl.Marker(el).setLngLat([x.longitude, x.latitude]).setPopup(popup).addTo(map.current))
+                })
+                console.log("Realtime Data added to map!")
+            })
+            
     }
     function mapLoad() {
 
@@ -302,7 +332,8 @@ export default function Home({ update }) {
         // description HTML from its properties.
         map.current.on('click', 'bus_stop', (e) => {
             const coordinates = e.features[0].geometry.coordinates.slice();
-            redirStop(e.features[0].properties.stop_id, e.features[0].properties.agency)
+            //redirStop(e.features[0].properties.stop_id, e.features[0].properties.agency)
+            setRequest({ stop: e.features[0].properties.stop_id, agency: e.features[0].properties.agency, type: "stop", route: null })
             resetMarkers()
             while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
                 coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
@@ -331,7 +362,6 @@ export default function Home({ update }) {
             });
         } else {
             alert("Sorry, We could not find that location.")
-
         }
     }
 
@@ -353,7 +383,9 @@ export default function Home({ update }) {
     function parseData(info) {
         console.log("data", info)
         const data = info.data
-        console.log(agency)
+        
+        const agency = request.agency
+        console.log("Agency", agency)
         // If data is loading, show loading screen
         if (data === "loading") {
             return <div className={map_css.no_content}>
@@ -418,7 +450,9 @@ export default function Home({ update }) {
                                 // Add Route Directly since we have the Trip ID already
                                 //addRoute(schedule.trip_id, agency)
                                 console.log("schedule", schedule)
-                                getTripInfo(agency, schedule.trip_id, stop)
+                                //getTripInfo(agency, schedule.trip_id, stop) 
+                                /* Replace with new setRequest Method */
+                                setRequest({ stop: stop, agency: agency, type: "route", route: schedule.trip_id })
                                 addRoute(schedule.shape_id, agency)
                             }
                         }} key={schedule.trip_id || "NOKEY_" + Math.random()}><div className={styleArr.join(" ")} >
@@ -444,9 +478,6 @@ export default function Home({ update }) {
                     })
                 }
             })()
-            const tripmap = data.schedule.map((schedule) => {
-                return schedule.trip_id
-            }).join(",")
             return <div className={map_css.arrv_parent}>
                 <div className={map_css.heading_child}>
                     <a onClick={() => flyTo(data.stop.stop_lat, data.stop.stop_lon)}><h3 className={map_css.header}>{data.stop.stop_name}</h3></a>
@@ -465,35 +496,40 @@ export default function Home({ update }) {
                                     }
                                 }()}</span>
                             </a>
-
-                            <a className={map_css.share} onClick={() => requestRealtime(tripmap, agency, data.stop.stop_id, data)}>
-                                <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>{function () {
-                                    if (info.type === "realtime") {
-                                        return "refresh"
-                                    } else {
-                                        return "schedule"
-                                    }
-                                }()}</span>
-                            </a>
                             <a className={map_css.share} href={"/schedule/sto/" + data.stop.stop_id + "?realtime=true"}>
                                 <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>departure_board</span>
+                            </a>
+                            <a className={map_css.share} onClick={() => {
+                                // Copy Curent URL to Clipboard
+                                navigator.clipboard.writeText(window.location.href)
+                                alert("URL Copied to Clipboard!")
+                                }
+                            }> 
+                                <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>share</span>
                             </a>
 
                         </div>
                     } else /*if (info.type === "realtime")*/ {
-                        return <div className={map_css.button_flex}><a className={map_css.share_sm} onClick={() => resetData()}><span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>clear</span></a><a className={map_css.button} href={"/schedule/" + agency.replace("oct", "octranspo") + "/" + stop}>View Schedule</a></div>
+                        return <div className={map_css.button_flex}>
+                            <a className={map_css.share_sm} onClick={() => resetData()}>
+                                <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>clear</span>
+                            </a>
+                            <a className={map_css.button} href={"/schedule/" + agency.replace("oct", "octranspo") + "/" + stop}>View Schedule</a></div>
                     }
                 })()}
             </div>
         }
     }
     async function getTripInfo(agency, trip, stop) {
+        console.log("Loading Trip Info")
         setData({ data: "loading", type: null })
 
         // Set URL Hash
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         hashParams.set('type', "route");
         hashParams.set('route', trip);
+
+        
         // Manually construct the hash string
         let hashString = '';
         for (let [key, value] of hashParams) {
@@ -515,9 +551,11 @@ export default function Home({ update }) {
         }
     }
     function redirStop(stop, agency) {
+        // Replace with setRequest
         setData({ data: "loading", type: null })
-        setAgency(agency)
-        setStop(stop)
+        setRequest({ stop: stop, agency: agency, type: "stop", route: null })
+        //setAgency(agency)
+        //setStop(stop)
 
         resetMarkers()
         removeRoute()
@@ -555,11 +593,18 @@ export default function Home({ update }) {
                 })}
             </div>
             <div className={map_css.button_flex}>
-                <a className={map_css.share} onClick={() => closeArrivals({ type: "route" })}>
+                <a className={map_css.share_sm} onClick={() => closeArrivals({ type: "route" })}>
                     <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>arrow_back</span>
                 </a>
                 <a className={map_css.share} onClick={() => gotoHighlight()}>
                     <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>pin_drop</span>
+                </a>
+                <a className={map_css.share} onClick={() => {
+                    // Copy Curent URL to Clipboard
+                    navigator.clipboard.writeText(window.location.href)
+                    alert("URL Copied to Clipboard!")
+                }}>
+                    <span className="material-icons-outlined" style={{ paddingBlock: "1vh" }}>share</span>
                 </a>
             </div>
         </div>
@@ -597,8 +642,8 @@ export default function Home({ update }) {
     }
     function resetData() {
         setData({ data: null, type: null })
-        setAgency(agency)
-        setStop(stop)
+        //setAgency(agency)
+        //setStop(stop)
         resetMarkers()
         removeRoute()
         console.log(data)
@@ -606,61 +651,12 @@ export default function Home({ update }) {
 
     function closeArrivals(info) {
         if (info.type === "realtime" || info.type === "route") {
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
             resetData()
-            setData({ data: "loading", type: null })
-            configStatSched(agency, stop)
+            setRequest({ stop: hashParams.get('stop'), agency: hashParams.get('agency'), type: "stop", route: null })
         } else {
             resetData()
         }
-    }
-    function requestRealtime(trip_id, agency, stopID, svdData) {
-        console.log(trip_id)
-        setData({ data: "loading", type: null })
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-
-        // Update agency and stop parameters
-        hashParams.set('type', "realtime");
-
-        // Manually construct the hash string
-        let hashString = '';
-        for (let [key, value] of hashParams) {
-            if (hashString !== '') hashString += '&';
-            hashString += `${key}=${value}`;
-        }
-
-        // Set the hash with the updated parameters
-        window.location.hash = hashString;
-        fetch("/api/gtfs/vehicle/" + agency + "?trip=" + trip_id)
-            .then((response) => response.json())
-            .then((geo) => {
-                // Add Markers
-                resetMarkers()
-                console.log(geo)
-                const newMarkers = []
-                geo.arrivals.forEach((x) => {
-                    // Create Markers
-
-                    const popup = new mapboxgl.Popup()
-                        .setLngLat([x.longitude, x.latitude])
-                        .setHTML('<h3>' + x.route + " " + x.trip.trip_headsign + '</h3><p>Bus: ' + x.vehicle.id + '</p>')
-                        .addTo(map.current);
-
-                    const el = document.createElement('div');
-                    el.className = map_css.marker;
-                    el.innerHTML = "<span class='material-icons-round' style='font-size: 5vh; color: #004777'>directions_bus</span>";
-                    el.addEventListener('click', () => {
-
-                        // Add Mapbox Popup
-                        console.log(x)
-                        addRoute(x.trip.shape_id, agency)
-                    });
-                    newMarkers.push(new mapboxgl.Marker(el).setLngLat([x.longitude, x.latitude]).setPopup(popup).addTo(map.current))
-                })
-                setMarker(newMarkers)
-                console.log("svdData", svdData)
-                setData({ data: { schedule: svdData.data.schedule, stop: svdData.data.stop }, type: "realtime" })
-
-            })
     }
     function resetMarkers() {
         console.log(marker)
@@ -676,21 +672,6 @@ export default function Home({ update }) {
         console.log("Markers Reset!")
         return
     }
-    /*function getContext(startTime, route, direction) {
-        fetch("/api/dynamic/context?startTime=" + startTime + "&route=" + route + "&direction=" + direction)
-            .then((response) => response.json())
-            .then((data) => {
-                console.log(data)
-                if (data.error === 400 || data.results.length === 0) {
-                    alert("No Shape Available for that route :(")
-                } else {
-                    addRoute(data.results.map((x) => {
-                        console.log(x)
-                        return x.trip_id
-                    }).join(","), "oct")
-                }
-            })
-    }*/
 
     function removeRoute() {
         if (map.current.getLayer("context_rt_lyr")) {
