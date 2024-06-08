@@ -3,11 +3,47 @@ import * as turf from '@turf/helpers';
 export const config = {
     runtime: 'edge', // this is a pre-requisite
 };
-import APIconfig from "../../../../config.json"
-import gtfs from "../../../../helpers/fetch_gtfs"
-export default async function handler(req,res) {
+
+import { PrismaClient } from '@prisma/client/edge'
+const prisma = new PrismaClient()
+import gtfsConfig from "../../../../config.json"
+
+export default async function handler(req, res) {
+
+    const agStopDb = gtfsConfig.agencies.filter((x) => {
+        return x.st && x.db
+    }).map((x) => {
+        return {
+            data: x.db.stops,
+            id: x.id
+        }
+    })
+
+    const allStops = await Promise.all(agStopDb.map(async (x) => {
+        const stopDb = await prisma[x.data].findMany();
+        const stopInformation = stopDb.filter(stop => 
+            !isNaN(parseFloat(stop.stop_lat)) && !isNaN(parseFloat(stop.stop_lon))
+        );    
+
+        return stopInformation.map((stop) => {
+            return turf.point([parseFloat(stop.stop_lon), parseFloat(stop.stop_lat)], {
+                stop_id: stop.stop_id,
+                stop_code: stop.stop_code,
+                stop_name: stop.stop_name,
+                agency: x.id
+            })
+        })
+    }));
+
+    return new Response(JSON.stringify(turf.featureCollection(allStops.flat())), {
+        status: 200,
+        headers: {
+            'content-type': 'application/json',
+        },
+    });
+    /*
     const params = new URL(req.url).searchParams   
-        const agencies = APIconfig.gtfs_st
+        const agencies = config.gtfs_st
         console.log("GEO/ALL_STOPS:")
         
         const stops = await Promise.all(agencies.map(async (x) => {
@@ -44,5 +80,5 @@ export default async function handler(req,res) {
             headers: {
                 'content-type': 'application/json',
             },
-        });
+        });*/
 }

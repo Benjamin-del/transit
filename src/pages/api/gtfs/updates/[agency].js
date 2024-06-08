@@ -2,139 +2,104 @@ import { DateTime } from "luxon";
 import config from "../../../../../config.json"
 const gtfs_rt = config.gtfs_rt
 
-import helper_stops from "../../../../../helpers/stops"
-import gtfs from "../../../../../helpers/fetch_gtfs"
+import { PrismaClient } from '@prisma/client/edge'
+const prisma = new PrismaClient()
+
 import gtfs_realtime from "../../../../../helpers/realtime_gtfs"
-
+import agency from "../../../../../helpers/agency"
 export default async function handler(req, res) {
-    const agency = req.query.agency
-    if (!gtfs_rt.includes(agency)) {
-        res.status(501).json({ error: "Invalid Agency" })
-        console.log("GTFS/VEHICLE:" + agency + " INVALID AGENCY")
-        return 
-    }
 
+    // Get id's
     const stopId = req.query.stop
+    const agencyId = req.query.agency
 
-    if (!trips || !stopId) {
-        console.log("GTFS/SCHEDULE: Missing required parameters")
-        res.status(400).json({ error: "Missing required parameters" })
-    }
-    console.log("GTFS/UPDATES:" + stopId + " " + agency)
-    const stop = await helper_stops.get(stopId, agency)
-    const trips = await gtfs.download("trips.txt", agency)
+    // Check if agency is valid
+    const agencyInfo = await agency.getAg(agencyId)
 
-    if (!stop) {
-        res.status(404).json({ error: "404" })
+    if (!agencyInfo) {
+        console.log("GTFS/UPDATES: Invalid Agency")
+        res.status(501).json({ error: "Invalid Agency" })
         return
     }
-    function cacheTrips(tripId) {
-        //console.log("tripId", tripId)
-        return trips.filter((x) => {
-            return x.split(",")[2] === tripId
-        }).map((x) => {
-            //route_id,service_id,trip_id,trip_headsign,direction_id,shape_id
-            return {
-                route: x.split(",")[0],
-                service_id: x.split(",")[1],
-                trip_id: x.split(",")[2],
-                trip_headsign: x.split(",")[3],
-                dir: x.split(",")[4],
-                shape: x.split(",")[5],
-            }
-        })[0]
+    if (!stopId || !agencyId) { /* Missing required parameters */
+        console.log("GTFS/UPDATES: Missing required parameters")
+        res.status(400).json({ error: "Missing required parameters" })
+        return
     }
-    const feed = await gtfs_realtime.realtime("trip", agency)
 
-    function getarrv(stopTimeUpdate) {
-        return stopTimeUpdate.filter((x) => {
-            //console.log(x.stopId,stop)
-            //console.log(x.arrival.time)
-            if (!x.arrival && !x.departure) {
-                console.log("ERROR!", x)
-                return false
-            }
-            return x.stopId === stopId
-            
-        }).map((x) => {
-            //console.log(x)
-            function getTime(x) {
-                console.log(x)
-                console.log("time1", x)
-                if (!x.arrival && x.departure) {
-                    console.log("-ARRV DEP")
-                    return {
-                        attribute: "Departing at:",
-                        time: DateTime.fromSeconds(x.departure.time.low, { zone: "America/Toronto" }) 
-                    }
-                } else if (x.arrival && !x.departure) {
-                    console.log("ARRV -DEP")
-                    return {
-                        attribute: "Live ETA:",
-                        time: DateTime.fromSeconds(x.arrival.time.low, { zone: "America/Toronto" })
-                    }
-                } else if (x.arrival && x.departure) {
-                    console.log("ARRV + DEP")
-                    console.log(x.arrival.time)
-                    return {
-                        attribute: "Live ETA:",
-                        time: DateTime.fromSeconds(x.arrival.time.low || x.arrival.time, { zone: "America/Toronto" })
-                    }
-                } else {
-                    console.log("ERROR!", x)
-                    return {
-                        attribute: "Error",
-                        time: DateTime.fromSeconds(0, { zone: "America/Toronto" })
-                    }
-                }
-            }
-            const tm = getTime(x)
-            return {
-                time: tm.time.toFormat("hh:mm:ss"),
-                time_arr: tm.attribute,
-                scheduleRelationship: x.scheduleRelationship,
-            }
-        })
+    const stop = await prisma[agencyInfo.db.stops].findFirst({
+        where: {
+            stop_id: stopId
+        }
+    })
+    
+    if (!stop) { /* Invalid peramaters */
+        console.log("GTFS/UPDATES: Invalid Paramaters")
+        res.status(501).json({ error: "Invalid Paramaters" })
+        return
     }
-    const fdRes = []
+
+    const feed = await gtfs_realtime.rt_beta("trip", agencyId)
+
     const ent = feed.entity
-    for (const x of ent) {
+    const refTimes = ent.filter((x) => {
 
-        const fnarrv = getarrv(x.tripUpdate.stopTimeUpdate)[0]
-        if (fnarrv) {
-            const trip = cacheTrips(x.tripUpdate.trip.tripId)
-            if (!trip) {
-                console.log("Trip not found")
-                console.log("tripId", x.tripUpdate.trip.tripId)
-                continue
-            }
-            //console.log(trip)
-            fdRes.push({
-                route: x.tripUpdate.trip.routeId,
-                service_id: trip.service_id,
-                arrv: fnarrv.time,
-                attribute: fnarrv.time_arr,
-                trip_id: x.tripUpdate.trip.tripId,
-                trip_headsign: trip.trip_headsign.replace(/\"/g, ""),
-                dir: x.tripUpdate.trip.directionId,
-                shape: trip.shape,
+        if (!x.tripUpdate) {
+            return false
+        }
+        if (!x.tripUpdate.stopTimeUpdate) {
+            return false
+        }
+        return x.tripUpdate.stopTimeUpdate.filter((y) => {
+            return y.stopId === stopId
+        }).length > 0
+    }).map((x) => {
+        return {
+            tripId: x.tripUpdate.trip.tripId,
+            stopTimeUpdate: x.tripUpdate.stopTimeUpdate.filter((y) => {
+                return y.stopId === stopId
             })
         }
-    }
-    function getts(timest) {
-        if (!timest) {
-            return DateTime.now().setZone("America/Toronto").toFormat("HHmmss")
-        } else {
-            return DateTime.fromSeconds(feed.header.timestamp.low, { zone: "America/Toronto" }).toFormat("HHmmss")
+    })
+
+    const tripIds = refTimes.map((x) => {
+        return x.tripId
+    })
+
+    const trips = await prisma.oc_trips.findMany({
+        where: {
+            trip_id: {
+                in: tripIds
+            }
         }
-    }
-    const query = {
-        stop: stopId,
-        realtime_support: true,
-        realtime: true,
-        accdays: ["today"],
-        time: getts(feed.header.timestamp.low)
-    }
-    res.status(200).json({ query: query, stop: stop, schedule: fdRes })
-    return
+    })
+
+    const tripInformation = refTimes.map((x) => {
+        const tripInfo = trips.filter((y) => {
+            return y.trip_id === x.tripId
+        })[0]
+        return {
+            route: tripInfo.route_id,
+            service_id: tripInfo.service_id,
+            arrv: DateTime.fromSeconds(x.stopTimeUpdate[0].arrival.time.low).toFormat("HH:mm:ss"),
+            attribute: "Live ETA:",
+            trip_id: tripInfo.trip_id,
+            trip_headsign: tripInfo.trip_headsign,
+            dir: tripInfo.direction_id,
+            block: tripInfo.block_id,
+            shape_id: tripInfo.shape_id,
+        } 
+    })
+
+    return res.json({
+        query: {
+            stop: stopId,
+            realtime_support: true,
+            realtime: true,
+            accdays: [],
+            time: DateTime.fromSeconds(feed.header.timestamp.low, { zone: "America/Toronto" }).toFormat("HH:mm:ss"),
+        },
+        stop: stop,
+        schedule: tripInformation
+    })
 }

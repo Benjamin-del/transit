@@ -1,6 +1,55 @@
 {
-    "gtfs_rt": ["sto", "oct"],
-    "gtfs_st": ["oct","sto"],
+    "gtfs_rt": ["oct"],
+    "gtfs_st": ["oct"],
+    "agencies": [
+        {
+            "id": "oct",
+            "name": "OC Transpo (BETA)",
+            "rt": true,
+            "st": true,
+            "files": [ 
+                {
+                    "id":"pos",
+                    "url":"https://nextrip-public-api.azure-api.net/octranspo/gtfs-rt-vp/beta/v1/VehiclePositions",
+                    "headers": {
+                        "Ocp-Apim-Subscription-Key": "{OCT_BETA_KEY}"
+                    }
+                },
+                {
+                    "id":"trip",
+                    "url":"https://nextrip-public-api.azure-api.net/octranspo/gtfs-rt-tp/beta/v1/TripUpdates",
+                    "headers": {
+                        "Ocp-Apim-Subscription-Key": "{OCT_BETA_KEY}"
+                    }
+                }
+            ],
+            "db": {
+                "stop_times": "oc_stop_times",
+                "trips": "oc_trips",
+                "stops": "oc_stops",
+                "routes": "oc_routes",
+                "shapes": "oc_shapes",
+                "calendar": "oc_calendar",
+                "calendar_dates": "oc_calendar_dates"
+            }
+        }, 
+        {
+            "id":"sto",
+            "name":"STO - Société de transport de l'Outaouais",
+            "rt": true,
+            "st": true,
+            "files": [
+                {
+                    "id":"pos",
+                    "url":"https://gtfs.sto.ca/download.php?hash={STO_API_HASH}&file=vehicule&key={STO_API_KEY}"
+                },
+                {
+                    "id":"trip",
+                    "url":"https://gtfs.sto.ca/download.php?hash={STO_API_HASH}&file=trip&key={STO_API_KEY}"
+                }
+            ]
+        }
+    ],
     "styles": {
         "oct": {
             "styles": {

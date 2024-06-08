@@ -1,5 +1,8 @@
 import * as turf from '@turf/helpers'
-import stop_helper from "../../../../helpers/stops"
+
+import agency from "../../../../helpers/agency";
+import { PrismaClient } from '@prisma/client/edge'
+const prisma = new PrismaClient()
 export const config = {
     runtime: 'edge', // this is a pre-requisite
 };
@@ -7,8 +10,8 @@ export const config = {
 export default async function handler(req,res) {
     const params = new URL(req.url).searchParams
     const id = params.get("id")
-    const agency = params.get("agency")
-    if (!id || !agency) {
+    const agencyId = params.get("agency")
+    if (!id || !agencyId) {
         return new Response(JSON.stringify({ error: "Missing required parameters" }), {
             status: 400,
             headers: {
@@ -16,16 +19,23 @@ export default async function handler(req,res) {
             },
         });
     }
-    console.log("GEO/STOP:" + id + " " + agency)
-    const stop = await stop_helper.get(id, agency)
+
+    const agencyInfo = await agency.getAg(agencyId)
+    console.log("GEO/STOP:" + id + " " + agencyId)
+    const stop = await prisma[agencyInfo.db.stops].findUnique({
+        where: {
+            stop_id: id
+        }
+    })
     if (!stop) {
-        return new Response(JSON.stringify({ error: "No stop found" }), {
+        return new Response(JSON.stringify({ error: "Stop not found" }), {
             status: 404,
             headers: {
                 'content-type': 'application/json',
             },
         });
     }
+
     const pt = turf.point([Number(stop.stop_lon), Number(stop.stop_lat)], {id: stop.stop_id, code: stop.stop_code, name: stop.stop_name})
     return new Response(JSON.stringify(turf.featureCollection(pt)), {
         status: 200,

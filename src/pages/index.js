@@ -350,7 +350,7 @@ export default function Home({ update }) {
 
     async function search() {
 
-        const request = await fetch("/api/dynamic/geolocate?q=" + document.getElementById("geolocate").value)
+        const request = await fetch("/api/geo/geolocate?q=" + document.getElementById("geolocate").value)
 
         const response = await request.json()
 
@@ -565,7 +565,7 @@ export default function Home({ update }) {
         console.log(data)
         return <div className={map_css.arrv_parent}>
             <div className={map_css.heading_child}>
-                <h3 className={map_css.header}>{data.tripInfo.route + " " + data.tripInfo.trip_headsign}</h3>
+                <h3 className={map_css.header}>{data.tripInfo.route_id + " " + data.tripInfo.trip_headsign}</h3>
             </div>
 
             <div className={map_css.arrv_scroll}>
@@ -625,7 +625,7 @@ export default function Home({ update }) {
                 <button onClick={() => search()} className={map_css.search_btn}>Search</button>
             </div>
             <div>
-                <a href='https://github.com/Benjamin-Del/transit'><p>Benja Transit v3.1</p></a>
+                <a href='https://github.com/Benjamin-Del/transit'><p>Benja Transit v3.5</p></a>
                 <Link href="/notices"><p>Open Data</p></Link>
                 <Link href="/search"><p>GTFS Query</p></Link>
             </div>

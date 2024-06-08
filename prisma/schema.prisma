@@ -1,0 +1,74 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model oc_calendar {
+  service_id String  @id(map: "calendar_pkey")
+  monday     String?
+  tuesday    String?
+  wednesday  String?
+  thursday   String?
+  friday     String?
+  saturday   String?
+  sunday     String?
+  start_date String?
+  end_date   String?
+}
+
+model oc_calendar_dates {
+  service_id   String
+  date         String
+  exception_type String?
+
+  @@id([service_id, date])
+}
+
+model oc_routes {
+  route_id         String  @id
+  route_short_name String?
+  route_long_name  String?
+  route_color      String?
+  route_text_color String?
+}
+
+model oc_shapes {
+  shape_id            String
+  shape_pt_lat        String?
+  shape_pt_lon        String?
+  shape_pt_sequence   String
+  shape_dist_traveled String?
+
+  @@id([shape_pt_sequence, shape_id])
+}
+
+model oc_stop_times {
+  trip_id       String
+  arrival_time  String?
+  stop_id       String?
+  stop_sequence String
+
+  @@id([trip_id, stop_sequence])
+}
+
+model oc_stops {
+  stop_id   String  @id
+  stop_code String?
+  stop_name String?
+  stop_lat  String?
+  stop_lon  String?
+}
+
+model oc_trips {
+  route_id      String?
+  service_id    String?
+  trip_id       String  @id
+  trip_headsign String?
+  direction_id  String?
+  block_id      String?
+  shape_id      String?
+}

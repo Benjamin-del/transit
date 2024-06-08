@@ -2,14 +2,21 @@ import * as turf from '@turf/helpers'
 //import centroid from '@turf/centroid'
 
 /* Remove Centroid for now, it's not working */
-import gtfs from "../../../../helpers/fetch_gtfs"
+import agency from '../../../../helpers/agency'
+
+import { PrismaClient } from '@prisma/client/edge'
+const prisma = new PrismaClient()
+
+
 export const config = {
     runtime: 'edge', // this is a pre-requisite
 };
 export default async function handler(req, res) {
     const params = new URL(req.url).searchParams
     const ag = params.get("agency")
-    const shapeid = params.get("id").split(",")
+    const shapeid = params.get("id")
+
+
     if (!shapeid || !ag) {
         return new Response(JSON.stringify({ error: "Missing required parameters" }), {
             status: 400,
@@ -18,12 +25,48 @@ export default async function handler(req, res) {
             },
         });
     }
-    console.log("GEO/SHAPE:" + shapeid + " " + ag)
-    const sps = await gtfs.download("shapes.txt", ag)
-    const tps = await gtfs.download("trips.txt", ag)
-    const fts = []
+    const agencyInfo = await agency.getAg(ag)
 
-    function tripsByShapeC(shapeId) {
+    if (!agencyInfo) {
+        return new Response(JSON.stringify({ error: "Agency not found" }), {
+            status: 404,
+            headers: {
+                'content-type': 'application/json',
+            },
+        });
+    }
+    const shapePoints = await prisma[agencyInfo.db.shapes].findMany({
+        where: {
+            shape_id: {
+                equals: shapeid
+            }
+        }
+    })
+
+    const turfCollection = turf.featureCollection([
+        turf.lineString(shapePoints.sort((a, b) => {
+            return a.shape_pt_sequence - b.shape_pt_sequence
+        }).map((x) => {
+            return [Number(x.shape_pt_lon), Number(x.shape_pt_lat)]
+        }), {
+            shape_id: shapeid
+        }
+    )])
+
+
+
+
+
+    return new Response(JSON.stringify(turfCollection), {
+        status: 200,
+        headers: {
+            'content-type': 'application/json',
+        },
+
+    })
+
+
+    /*function tripsByShapeC(shapeId) {
         //route_id,service_id,trip_id,trip_headsign,direction_id,shape_id
         return tps.filter((x) => {
             return x.split(",")[5] === shapeId
@@ -63,5 +106,5 @@ export default async function handler(req, res) {
         headers: {
             'content-type': 'application/json',
         },
-    });
+    });*/
 }

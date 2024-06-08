@@ -1,5 +1,8 @@
 import { DateTime } from "luxon";
-import gtfs from "../../../../../helpers/fetch_gtfs"
+
+import { PrismaClient } from '@prisma/client/edge'
+const prisma = new PrismaClient()
+
 import config from "../../../../../config.json"
 import gtfs_realtime from "../../../../../helpers/realtime_gtfs"
 const gtfs_rt = config.gtfs_rt
@@ -18,44 +21,42 @@ export default async function handler(req,res) {
         return 
     }
     console.log("GTFS/VEHICLE:" + req.query.trip + " " + agency)
-    const feed = await gtfs_realtime.realtime("VehiclePositions", agency)
-    const trips = await gtfs.download("trips.txt", agency)
-    function cacheTrips(tripId) {
-        console.log("tripId", tripId)
-        return trips.filter((x) => {
-            return x.split(",")[2] === tripId
-        }).map((x) => {
-            const dts = x.split(",")
-            return {
-                //route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id
-                route: dts[0],
-                service_id: dts[1],
-                trip_id: dts[2],
-                trip_headsign: dts[3].replace(/\"/g, ""),
-                dir: dts[4],
-                block_id: dts[5],
-                shape_id: dts[6],
-            }
-        })[0]
-    }
+    const feed = await gtfs_realtime.rt_beta("pos", agency)
+
 
     const trip = req.query.trip?.split(",") || []
     const route = req.query.route?.split(",") || []
 
     const ent = feed.entity
-        
-    const ftld = ent.filter((x) => {
-        
-        console.log(x.vehicle)
+    
+    const refTrips = ent.filter((x) => {
         if (!x.vehicle.trip) {
             return false
         } else {
             return trip.includes(x.vehicle.trip.tripId) || route.includes(x.vehicle.trip.routeId)
         }
-    }).map((x) =>{
-        console.log(x)
-        const pt = {
-            trip: cacheTrips(x.vehicle.trip.tripId),
+    })
+    
+    const tripIds = refTrips.map((x) => {
+        return x.vehicle.trip.tripId
+    })
+    console.log("tripIds", tripIds)
+    const trips = await prisma.oc_trips.findMany({
+        where: {
+            trip_id: {
+                in: tripIds
+            }
+        }
+    })
+    console.log("trips", trips)
+    const tripInformation = refTrips.map((x) => {
+        const tripInfo = trips.filter((y) => {
+            return y.trip_id === x.vehicle.trip.tripId
+        })[0]
+        console.log("tripInfo", tripInfo)
+        return {
+            trip: tripInfo,
+            tripId: x.vehicle.trip.tripId,
             route: x.vehicle.trip.routeId,
             dir: x.vehicle.trip.directionId,
             geo: true,
@@ -68,10 +69,8 @@ export default async function handler(req,res) {
             },
             vehicle: x.vehicle.vehicle
         }
-
-        return pt
     })
-    res.json({arrivals: ftld})
+    res.json({arrivals: tripInformation})
 
 }
   

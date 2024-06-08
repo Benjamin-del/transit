@@ -1,8 +1,7 @@
 import { DateTime } from "luxon";
 
-import gtfs from "../../../../../helpers/fetch_gtfs"
-import helper_days from "../../../../../helpers/acc_days"
-import helper_stops from "../../../../../helpers/stops"
+import { PrismaClient } from '@prisma/client/edge'
+const prisma = new PrismaClient()
 
 // Using to parse dates and to ensure I don't have to deal with timezones
 const zone = "America/Toronto"
@@ -27,16 +26,6 @@ export default async function handler(req, res) {
         });
     }
     console.log("GTFS/SCHEDULE:" + stopid + " " + ag)
-    /*const stop = await helper_stops.get(stopid, ag)
-    if (!stop) {
-        return new Response(JSON.stringify({ error: "404" }), {
-            status: 404,
-            headers: {
-                'content-type': 'application/json',
-            },
-        });
-    }*/
-    //console.log("now:", now)
     const currentDateParam = params.get("date");
     const currentTimeParam = params.get("time");
     const currentDateTime = DateTime.now().setZone(zone);
@@ -55,88 +44,81 @@ export default async function handler(req, res) {
     const eodDiff = eod.diff(param_gtfshr).as('minutes');
     const gtfsmx = Number((eodDiff < defPlus ? eod : param_gtfshr.plus({ minutes: Number(defPlus) })).toFormat('HHmmss'));
 
-    async function acceptabledate(ag) {
-        if (ag === "oct") {
-            return await helper_days.cal(ag, gtfsdt_lx)
-        } else if (ag === "sto") {
-            return await helper_days.cal_dates(ag, gtfsdt_lx)
+
+    // Get all service days, and then filter out the ones that are not in the acceptable days
+    const serviceCalander = await prisma.oc_calendar.findMany()
+    const serviceExceptions = await prisma.oc_calendar_dates.findMany()
+
+    const dayOfWeek = gtfsdt_lx.toFormat("EEEE").toLowerCase()
+    console.log("Day of week", dayOfWeek)
+    const accDays = serviceCalander.filter(x => x[dayOfWeek] === "1" && x.start_date <= gtfsdt && x.end_date >= gtfsdt).map(x => x.service_id)
+    // Calander_dates is a list of exceptions, 1 = added, 2 = removed
+    console.log(String(gtfsdt))
+    const serviceRemoved = serviceExceptions.filter(x => x.date === String(gtfsdt) && x.exception_type === "2" /* STRING */).map(x => x.service_id)
+    const serviceAdded = serviceExceptions.filter(x => x.date === String(gtfsdt) && x.exception_type === "1" /* STRING */).map(x => x.service_id)
+
+    console.log("serviceAdded", serviceAdded)
+    console.log("serviceRemoved", serviceRemoved)
+
+    const todaysService = accDays.filter(x => !serviceRemoved.includes(x)).concat(serviceAdded) /* Remove the removed services and add the added services */
+
+    const stopTimes = await prisma.oc_stop_times.findMany({
+        where: {
+            stop_id: stopid,
         }
-    }
-    // Load all of the files
-    const [tms, tps, accdays] = await Promise.all([
-        gtfs.download("stop_times.txt", ag),
-        gtfs.download("trips.txt", ag),
-        acceptabledate(ag)
-    ]);
+    })
+    const tripId = stopTimes.map(x => x.trip_id)
 
-    const accdaysSet = new Set(accdays);
-
-    //console.log("days", accdays)
-    //const accrx = new RegExp(accdays.join("|"))
-
-    const ftldtms = tms.filter((x) => {
-        const dts = x.split(",")
-        if (dts[2] === stopid) {
-            const arrv = Number(dts[1].replace(/:/g, ""))
-            //console.log(dts)
-            if (arrv > gtfshr && arrv < gtfsmx) {
-                // Return if the time is between the start and end time
-                return true
+    const trips = await prisma.oc_trips.findMany({
+        where: {
+            trip_id: {
+                in: tripId
             }
-            //return true
         }
-    }).map(x => {
-        const split = x.split(",");
-        return { id: split[0], arrv: split[1] };
-    });
-    
-    const ftldtps = []
-    function compare(a, b) {
-        const aArrv = Number(a.arrv.replace(/:/g, ""));
-        const bArrv = Number(b.arrv.replace(/:/g, ""));
+    })
 
-        return aArrv - bArrv;
-    }
-    //console.log("1", ftldtms)
-    //console.log("2", accrx)
-    // Convert tps into a map
-    const tpsMap = new Map();
-    tps.forEach((y) => {
-        const dts = y.split(",");
-        tpsMap.set(dts[2], dts);
-    });
+    const activeTrips = trips.filter(x => todaysService.includes(x.service_id))
 
-    // Use the map in the ftldtms loop
-    ftldtms.forEach((x) => {
-        const dts = tpsMap.get(x.id);
-        if (dts && accdaysSet.has(dts[1])) {
-            //route_id,service_id,trip_id,trip_headsign,direction_id,block_id,shape_id
-            ftldtps.push({
-                route: dts[0],
-                service_id: dts[1],
-                arrv: x.arrv,
-                attribute: "Scheduled at:",
-                trip_id: dts[2],
-                trip_headsign: dts[3].replace(/\"/g, ""),
-                dir: dts[4],
-                block: dts[5],
-                shape_id: dts[6].replace("\r", ""),
-            });
+    const recentTimes = stopTimes.filter((x) => {
+        return gtfshr <= Number(x.arrival_time.replace(/:/g, "")) && gtfsmx >= Number(x.arrival_time.replace(/:/g, ""))
+    }).filter((x) => {
+        return activeTrips.find(y => y.trip_id === x.trip_id)
+    }).map((x) => {
+        const trip = trips.find(y => y.trip_id === x.trip_id)
+        return {
+            route: trip.route_id,
+            service_id: trip.service_id,
+            arrv: x.arrival_time,
+            attribute: "Scheduled at:",
+            trip_id: trip.trip_id,
+            trip_headsign: trip.trip_headsign.replace(/\"/g, "") || "N/A",
+            dir: trip.direction_id,
+            block: trip.block_id,
+            shape_id: trip.shape_id.replace("\r", ""),
         }
-    });
+    })
 
+    const stop = await prisma.oc_stops.findUnique({
+        where: {
+            stop_id: stopid
+        }
+    })
     return new Response(JSON.stringify({
         query: {
             time: gtfshr,
             date: gtfsdt,
             stop: stopid,
             agency: ag.replace("oct", "OC Transpo"),
-            accdays: accdays,
+            service: {
+                added: serviceAdded,
+                removed: serviceRemoved,
+                active: todaysService
+            },
             gtfsmx: gtfsmx,
             realtime: false
         },
-        stop: await helper_stops.get(stopid, ag) || null,
-        schedule: ftldtps.sort(compare) // Lets Sort!
+        stop: stop || null,
+        schedule: recentTimes
     }), {
         status: 200,
         headers: {

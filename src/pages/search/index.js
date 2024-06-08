@@ -209,7 +209,7 @@ export default function Query({ }) {
                                     <tbody>
                                         <tr>
                                             <td>Route</td>
-                                            <td><a onClick={(event) => modifySearch([x.trip.route], event, true)}>{x.trip.route}</a></td>
+                                            <td><a onClick={(event) => modifySearch([x.trip.route_id], event, true)}>{x.trip.route_id}</a></td>
                                         </tr>
                                         <tr>
                                             <td>Service ID</td>
@@ -226,7 +226,7 @@ export default function Query({ }) {
                                         </tr>
                                         <tr>
                                             <td>Direction</td>
-                                            <td>{x.trip.dir}</td>
+                                            <td>{x.trip.direction_id}</td>
                                         </tr>
                                         <tr>
                                             <td>Block ID</td>
@@ -234,7 +234,7 @@ export default function Query({ }) {
                                         </tr>
                                         <tr>
                                             <td>Shape ID</td>
-                                            <td><a onClick={(event) => addShape(x.trip.shape, event.currentTarget)}>{x.trip.shape}</a></td>
+                                            <td><a onClick={(event) => addShape(x.trip.shape_id, event.currentTarget)}>{x.trip.shape_id}</a></td>
                                         </tr>
                                     </tbody>
                                 </table>
