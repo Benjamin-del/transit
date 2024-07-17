@@ -2,7 +2,7 @@ import Head from "next/head"
 import error_css from "../../styles/error.module.css"
 import route_css from "../../styles/routes.module.css"
 import schedule_css from "../../styles/schedule.module.css"
-import 'material-icons/iconfont/material-icons.css'
+import 'material-symbols';
 import config from "../../../config.json"
 const gtfs_rt = config.gtfs_rt
 
@@ -18,7 +18,7 @@ export default function Home(data) {
                 <main className="flex min-h-screen flex-col">
                     <div className={error_css.par_elem}>
                         <div className={error_css.cld_elem}>
-                            <span className="material-icons-outlined" style={{ color: "#ff7700", fontSize: "10vh" }}>bus_alert</span>
+                            <span className="material-symbols-outlined" style={{ color: "#ff7700", fontSize: "10vh" }}>bus_alert</span>
 
                             <h1>ERROR</h1>
                             <p>There was a Server Error.</p>
@@ -40,7 +40,7 @@ export default function Home(data) {
                 <main className="flex min-h-screen flex-col">
                     <div className={error_css.par_elem}>
                         <div className={error_css.cld_elem}>
-                            <span className="material-icons-outlined" style={{ color: cag(data.agency).styles.primary, fontSize: "10vh" }}>bus_alert</span>
+                            <span className="material-symbols-outlined" style={{ color: cag(data.agency).styles.primary, fontSize: "10vh" }}>bus_alert</span>
 
                             <h1>ERROR</h1>
                             <p>Sorry, We searched all of the city, but we didn&apos;t find this stop.</p>
@@ -91,7 +91,7 @@ export default function Home(data) {
         if (schedule.length === 0) {
             return (
                 <div className={schedule_css.sched_err}>
-                    <span className="material-icons-outlined" style={{ color: cag(data.agency).styles.primary, fontSize: "10vh" }}>event_busy</span>
+                    <span className="material-symbols-outlined" style={{ color: cag(data.agency).styles.primary, fontSize: "10vh" }}>event_busy</span>
                     <h1 style={{ color: cag(data.agency).styles.primary }} >No Departures</h1>
                     <p>Even Busses need to sleep.</p>
                     <br />
@@ -124,7 +124,7 @@ export default function Home(data) {
                 return x.trip_id
             }).join(","))
             //console.log(rtqr)
-            return (<div className={schedule_css.realtime_msg}><span className="material-icons-outlined">departure_board</span><p>Last updated at: {htmltime}</p><p>|</p><button onClick={() => window.location.href = "?realtime=false"}>View Schedule</button></div>)
+            return (<div className={schedule_css.realtime_msg}><span className="material-symbols-outlined">departure_board</span><p>Last updated at: {htmltime}</p><p>|</p><button onClick={() => window.location.href = "?realtime=false"}>View Schedule</button></div>)
         } else if (data.schedule.query.realtime_support) {
             return <div className={schedule_css.realtime_msg}><input type="time" id="gtfshr" onChange={() => updateTime()} defaultValue={htmltime} /><button onClick={() => window.location.href = "?realtime=true"}>View Updates</button></div>
         } else {

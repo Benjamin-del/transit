@@ -31,24 +31,17 @@
                 "shapes": "oc_shapes",
                 "calendar": "oc_calendar",
                 "calendar_dates": "oc_calendar_dates"
+            },
+            "table_headers": {
+                "stop_times": ["trip_id", "arrival_time", "stop_id", "stop_sequence"],
+                "trips": ["route_id","service_id", "trip_id",  "trip_headsign", "direction_id", "block_id", "shape_id"],
+                "stops": ["stop_id", "stop_code", "stop_name", "stop_lat", "stop_lon"],
+                "routes": ["route_id", "route_short_name", "route_long_name", "route_color", "route_text_color"],
+                "shapes": ["shape_id", "shape_pt_lat", "shape_pt_lon", "shape_pt_sequence"],
+                "calendar": ["service_id", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "start_date", "end_date"],
+                "calendar_dates": ["service_id", "date", "exception_type"]
             }
-        }, 
-        {
-            "id":"sto",
-            "name":"STO - Société de transport de l'Outaouais",
-            "rt": true,
-            "st": true,
-            "files": [
-                {
-                    "id":"pos",
-                    "url":"https://gtfs.sto.ca/download.php?hash={STO_API_HASH}&file=vehicule&key={STO_API_KEY}"
-                },
-                {
-                    "id":"trip",
-                    "url":"https://gtfs.sto.ca/download.php?hash={STO_API_HASH}&file=trip&key={STO_API_KEY}"
-                }
-            ]
-        }
+        }    
     ],
     "styles": {
         "oct": {

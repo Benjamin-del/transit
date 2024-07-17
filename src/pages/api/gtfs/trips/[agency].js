@@ -74,6 +74,8 @@ export default async function handler(req, res) {
                 atStop: now.toString().substring(0, 4) - x.arrival_time.replace(/:/g, "").substring(0, 4) === 0
             }
         }
+    }).sort((a, b) => {
+        return a.stop_sequence - b.stop_sequence
     })
 
     return new Response(JSON.stringify({
