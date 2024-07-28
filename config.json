@@ -1,6 +1,4 @@
 {
-    "gtfs_rt": ["oct"],
-    "gtfs_st": ["oct"],
     "agencies": [
         {
             "id": "oct",
@@ -42,23 +40,5 @@
                 "calendar_dates": ["service_id", "date", "exception_type"]
             }
         }    
-    ],
-    "styles": {
-        "oct": {
-            "styles": {
-                "primary": "#ED1B2E",
-                "secondary": "#2C2C2C",
-                "text": "#FFFFFF"
-            },
-            "bg": "/images/oc_def_bg.png"
-        },
-        "sto": {
-            "styles": {
-                "primary": "#33A948",
-                "secondary": "#007F89",
-                "text": "#FFFFFF"
-            },
-            "bg": "/images/oc_def_bg.png"
-        }
-    }
+    ]
 }

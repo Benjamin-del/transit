@@ -103,6 +103,7 @@ input[type="time"] {
 }
 .bg {
   background-position: center center !important;
+  background: url('/images/oc_def_bg.png');
 }
 h3 {
   width: 100%;

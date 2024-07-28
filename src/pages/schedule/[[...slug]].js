@@ -3,8 +3,7 @@ import error_css from "../../styles/error.module.css"
 import route_css from "../../styles/routes.module.css"
 import schedule_css from "../../styles/schedule.module.css"
 import 'material-symbols';
-import config from "../../../config.json"
-const gtfs_rt = config.gtfs_rt
+import agency from "../../../helpers/agency"
 
 export default function Home(data) {
     //console.log("data", data)
@@ -40,7 +39,7 @@ export default function Home(data) {
                 <main className="flex min-h-screen flex-col">
                     <div className={error_css.par_elem}>
                         <div className={error_css.cld_elem}>
-                            <span className="material-symbols-outlined" style={{ color: cag(data.agency).styles.primary, fontSize: "10vh" }}>bus_alert</span>
+                            <span className="material-symbols-outlined">bus_alert</span>
 
                             <h1>ERROR</h1>
                             <p>Sorry, We searched all of the city, but we didn&apos;t find this stop.</p>
@@ -53,17 +52,6 @@ export default function Home(data) {
                 </main>
             </div>
         )
-    }
-    function cag(ag) {
-        if (ag === "octranspo" || ag === "oct") {
-            return config.styles.oct
-        } else if (ag === "sto") {
-            return config.styles.sto
-        } else if (ag === "via") {
-            return config.styles.via
-        } else {
-            return ""
-        }
     }
     function rvfmdr(dt) {
         //console.log(dt.toString().length)
@@ -87,12 +75,11 @@ export default function Home(data) {
     }
 
     function mapsched() {
-        onload()
         if (schedule.length === 0) {
             return (
                 <div className={schedule_css.sched_err}>
-                    <span className="material-symbols-outlined" style={{ color: cag(data.agency).styles.primary, fontSize: "10vh" }}>event_busy</span>
-                    <h1 style={{ color: cag(data.agency).styles.primary }} >No Departures</h1>
+                    <span className="material-symbols-outlined" >event_busy</span>
+                    <h1>No Departures</h1>
                     <p>Even Busses need to sleep.</p>
                     <br />
                     <p>No busses are scheduled during this time</p>
@@ -106,7 +93,7 @@ export default function Home(data) {
                 return (
 
                     <div className={schedule_css.arrv} id={"tp-arrv_" + x.trip_id} key={"index-" + index}>
-                        <span className={route_css.route_spn} /*style={{ backgroundColor: cag(data.agency).styles.primary }}*/>{x.route}</span> <p className={schedule_css.arrv_txt}>{x.trip_headsign}</p>
+                        <span className={route_css.route_spn} >{x.route}</span> <p className={schedule_css.arrv_txt}>{x.trip_headsign}</p>
                         <p id={"tp-p_" + x.trip_id}>{x.attribute} {x.arrv}</p>
                     </div>
                 )
@@ -132,30 +119,20 @@ export default function Home(data) {
         }
     }
 
-    function onload() {
-        if (process.browser) {
-            const r = document.querySelector(":root")
-            r.style.setProperty("--primary", cag(data.agency).styles.primary)
-            r.style.setProperty("--secondary", cag(data.agency).styles.secondary)
-            r.style.setProperty("--text", cag(data.agency).styles.text)
-        } else {
-            console.log("Server")
-        }
-    }
     return (
         <div>
             <Head>
                 <title>{`Benja Transit | Schedule @ ${data.schedule.stop.stop_name}`}</title>
             </Head>
-            <main className="flex min-h-screen flex-col bg" style={{ background: `url(${cag(data.agency).bg})` }}>
+            <main className="flex min-h-screen flex-col bg">
                 <div className={schedule_css.hed}>
-                    <h1 style={{ color: cag(data.agency).styles.primary }} className={schedule_css.hed_h1}>Scheduled Arrivals</h1>
+                    <h1 className={schedule_css.hed_h1}>Scheduled Arrivals</h1>
                     <p>Stop: {data.schedule.stop.stop_name}</p>
                 </div>
                 <div className={schedule_css.arrv_par}>
                     {mapsched()}
                 </div>
-                <div className={schedule_css.opt} /*style={{ backgroundColor: cag(data.agency).styles.primary }}*/>
+                <div className={schedule_css.opt} >
                     {checkRealTime()}
                 </div>
             </main>
@@ -168,11 +145,14 @@ export async function getServerSideProps(context) {
     const url = process.env.URL
     //console.log(context.params)
     //console.log("query", context.query)
+
+    const agencyInfo = await agency.getAg(context.params.slug[0])
+
     async function getrequest() {
         const ag = context.params.slug[0].replace("octranspo", "oct")
 
-        if (config.gtfs_st.includes(ag) || config.gtfs_rt.includes(ag)) {
-            if (gtfs_rt.includes(ag) && context.query.realtime === "true") {
+        if (agencyInfo.rt || agencyInfo.st /* Agency supported */) {
+            if (agencyInfo.rt && context.query.realtime === "true") {
                 console.log("REALTIME")
                 const ftcUrl = url + "/api/gtfs/updates/" + ag + "?stop=" + context.params.slug[1]
                 console.log(ftcUrl)

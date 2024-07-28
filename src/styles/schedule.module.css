@@ -33,7 +33,7 @@ display: inline;
 }
 .hed_h1 {
     height: auto;
-    color: var(--primary);
+    color: #ED1B2E;
 }
 .opt {
     height: 10vh;
@@ -41,7 +41,7 @@ display: inline;
     align-items: center;
     justify-content: center;
     flex-direction: row;
-    background: var(--secondary);
+    background: #2C2C2C;
     padding: 10px;
 }
 .realtime_msg {

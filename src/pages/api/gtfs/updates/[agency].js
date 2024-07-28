@@ -1,6 +1,5 @@
 import { DateTime } from "luxon";
 import config from "../../../../../config.json"
-const gtfs_rt = config.gtfs_rt
 
 import { PrismaClient } from '@prisma/client/edge'
 const prisma = new PrismaClient()

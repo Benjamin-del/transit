@@ -3,25 +3,28 @@ import { DateTime } from "luxon";
 import { PrismaClient } from '@prisma/client/edge'
 const prisma = new PrismaClient()
 
-import config from "../../../../../config.json"
 import gtfs_realtime from "../../../../../helpers/realtime_gtfs"
-const gtfs_rt = config.gtfs_rt
+import agency from "../../../../../helpers/agency"
 
 export default async function handler(req,res) {
-    const agency = req.query.agency
-    if ((!req.query.trip && !req.query.route) || !agency) {
+    const agencyID = req.query.agency
+    console.log("GTFS/VEHICLE A:" + agencyID)
+    const agencyInfo = await agency.getAg(agencyID)
+
+    if ((!req.query.trip && !req.query.route) || !agencyID) {
         console.log("GTFS/VEHICLE: Missing required parameters")
         res.status(400).json({ error: "Missing required parameters" })
         return
     }
 
-    if (!gtfs_rt.includes(agency)) {
+    if (!agencyInfo || agencyInfo.rt == false /* Agency not supported */) {
+        console.log("GTFS/VEHICLE: Invalid Agency")
+        console.log(agencyInfo)
         res.status(501).json({ error: "Invalid Agency" })
-        console.log("GTFS/VEHICLE:" + agency + " INVALID AGENCY")
-        return 
+        return
     }
-    console.log("GTFS/VEHICLE:" + req.query.trip + " " + agency)
-    const feed = await gtfs_realtime.rt_beta("pos", agency)
+    console.log("GTFS/VEHICLE:" + req.query.trip + " " + agencyID)
+    const feed = await gtfs_realtime.rt_beta("pos", agencyID)
 
 
     const trip = req.query.trip?.split(",") || []
