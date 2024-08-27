@@ -14,6 +14,11 @@
   display: flex;
 }
 
+.gap_flex {
+  display: flex;
+  gap: 0.5vh;
+}
+
 .arrv_scroll {
   overflow-x: scroll;
 }
@@ -33,7 +38,7 @@
 .arrv_title {
   display: flex;
   padding: 1vh;
-  gap: 0.5vh;
+  justify-content: space-between;
 }
 
 .heading_child {
@@ -294,4 +299,17 @@
   flex-direction: column;
   padding-bottom: 1vh;
   max-height: fit-content;
+}
+
+.no_bg {
+  background: none;
+}
+
+.adv_src {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 1vh;
+  justify-content: space-around;
+  align-items: stretch;
 }
