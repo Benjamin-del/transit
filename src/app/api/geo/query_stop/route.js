@@ -3,9 +3,7 @@ import * as turf from '@turf/helpers'
 import agency from "../../../../../helpers/agency";
 import { PrismaClient } from '@prisma/client/edge'
 const prisma = new PrismaClient()
-export const config = {
-    runtime: 'edge', // this is a pre-requisite
-};
+export const runtime = "edge"
 
 export async function GET(req) {
     const params = new URL(req.url).searchParams
