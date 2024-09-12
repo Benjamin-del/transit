@@ -14,7 +14,6 @@ export async function GET(req) {
     const ag = params.get("agency")
     const shapeid = params.get("id")
 
-
     if (!shapeid || !ag) {
         return new Response(JSON.stringify({ error: "Missing required parameters" }), {
             status: 400,

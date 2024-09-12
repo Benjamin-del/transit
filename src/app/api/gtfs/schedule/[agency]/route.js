@@ -49,15 +49,11 @@ export async function GET(req) {
     const serviceExceptions = await prisma.oc_calendar_dates.findMany()
 
     const dayOfWeek = gtfsdt_lx.toFormat("EEEE").toLowerCase()
-    console.log("Day of week", dayOfWeek)
     const accDays = serviceCalander.filter(x => x[dayOfWeek] === "1" && x.start_date <= gtfsdt && x.end_date >= gtfsdt).map(x => x.service_id)
     // Calander_dates is a list of exceptions, 1 = added, 2 = removed
     console.log(String(gtfsdt))
     const serviceRemoved = serviceExceptions.filter(x => x.date === String(gtfsdt) && x.exception_type === "2" /* STRING */).map(x => x.service_id)
     const serviceAdded = serviceExceptions.filter(x => x.date === String(gtfsdt) && x.exception_type === "1" /* STRING */).map(x => x.service_id)
-
-    console.log("serviceAdded", serviceAdded)
-    console.log("serviceRemoved", serviceRemoved)
 
     const todaysService = accDays.filter(x => !serviceRemoved.includes(x)).concat(serviceAdded) /* Remove the removed services and add the added services */
 

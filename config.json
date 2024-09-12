@@ -5,20 +5,14 @@
             "name": "OC Transpo (BETA)",
             "rt": true,
             "st": true,
-            "files": [ 
+            "files": [
                 {
-                    "id":"pos",
-                    "url":"https://nextrip-public-api.azure-api.net/octranspo/gtfs-rt-vp/beta/v1/VehiclePositions",
-                    "headers": {
-                        "Ocp-Apim-Subscription-Key": "{OCT_BETA_KEY}"
-                    }
+                    "id":"js-pos",
+                    "url":"https://tzbqxdgzaysschsbcxyf.supabase.co/functions/v1/export?table=oc_pos"
                 },
                 {
-                    "id":"trip",
-                    "url":"https://nextrip-public-api.azure-api.net/octranspo/gtfs-rt-tp/beta/v1/TripUpdates",
-                    "headers": {
-                        "Ocp-Apim-Subscription-Key": "{OCT_BETA_KEY}"
-                    }
+                    "id":"js-updates",
+                    "url":"https://tzbqxdgzaysschsbcxyf.supabase.co/functions/v1/export?table=oc_updates"
                 }
             ],
             "db": {

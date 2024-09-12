@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useEffect, useState , useContext} from 'react';
+import React, { useRef, useEffect, useState, useContext } from 'react';
 
 import mapboxgl from 'mapbox-gl';
 import map_css from '../../styles/map.module.css'
@@ -11,7 +11,7 @@ import 'material-symbols';
 const URL = process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : process.env.URL
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_KEY;
-  
+
 export default function Home({ params }) {
 
     const { slug } = params
@@ -119,7 +119,7 @@ export default function Home({ params }) {
         }
 
         //If  Params (stop, agency, and type) are present, load the data
-        if (slug && (slug[1] === "stop" || slug[1] === "route")) {
+        if (slug && (slug[1] === "stop" || slug[1] === "route" || slug[1] === "arrival")) {
             setRequest({ stop: slug[2], agency: slug[0], type: slug[1], route: slug[2] })
         }
         // Clean up on unmount
@@ -137,8 +137,11 @@ export default function Home({ params }) {
 
         if (/*request.stop && */ request.agency && request.type) {
             if (request.type === "stop" /* Replacing Realtime & Static info stop, will query for both */) {
-                console.log("Requesting Schedule/Realtime Data")
-                configStatSched(request.agency, request.stop, (request.time || undefined), (request.date || undefined))
+                console.log("Requesting Schedule Data")
+                configStatSched(request.agency, request.stop, (request.time || undefined), (request.date || undefined), false)
+            } else if (request.type === "arrival") {
+                console.log("Requesting Realtime Data")
+                configStatSched(request.agency, request.stop, undefined, undefined, true)
             } else if (request.type === "route") {
                 console.log("Requesting Trip Data")
                 getTripInfo(request.agency, request.route, (request.stop || undefined))
@@ -148,10 +151,19 @@ export default function Home({ params }) {
         }
     }, [request])
 
-    async function configStatSched(agency, stop, time, date) {
+    async function configStatSched(agency, stop, time, date, realtime) {
 
-        window.history.pushState({ path: "/" + agency + "/stop/" + stop }, '', "/" + agency + "/stop/" + stop)
-        const staticData = await fetch("/api/gtfs/schedule/" + agency + "?stop=" + stop + "&time=" + time + "&date=" + date) // Fetch Static Data
+        if (realtime) {
+            window.history.pushState({ path: "/" + agency + "/arrival/" + stop }, '', "/" + agency + "/arrival/" + stop)
+        } else {
+            window.history.pushState({ path: "/" + agency + "/stop/" + stop }, '', "/" + agency + "/stop/" + stop)
+        }
+        const staticData = await fetch("/api/gtfs/" + (function () {
+            if (realtime) {
+                return "updates"
+            }
+            return "schedule"
+        }()) + "/" + agency + "?stop=" + stop + "&time=" + time + "&date=" + date) // Fetch Static Data
             .then((response) => response.json())
             .then((data) => {
                 console.log("Static Data", data)
@@ -169,8 +181,9 @@ export default function Home({ params }) {
                     return
                 }
                 // Set data, Tell them it is a static schedule
+                console.log("query", data.query)
                 setContent({
-                    type: "stop",
+                    type: realtime ? "arrival" : "stop",
                     data: data.schedule,
                     query: data.query,
                     dsc: {
@@ -190,18 +203,21 @@ export default function Home({ params }) {
                 }
                 return { data: data, type: "static" }
             })
-        const uniqueRoutes = [...new Set(staticData.data.schedule.map((x) => x.route))].join(",")
+        const uniqueRoutes = [...new Set(staticData.data.schedule.map((x) => x.trip_id))].join(",")
         console.log(uniqueRoutes) // Instead of going by trips param, I am going to go by route and have an ioption to view the trip on the sidebar (Implement Later)
         if (uniqueRoutes === "") {
             console.log("No Routes")
             return
         }
-        const realtimeData = await fetch("/api/gtfs/vehicle/" + agency + "?route=" + uniqueRoutes)
+        console.log("realtime", realtime)
+        if (realtime) {
+        await fetch("/api/gtfs/vehicle/" + agency + "?trip=" + uniqueRoutes)
             .then((response) => response.json())
             .then((data) => {
                 console.log("Realtime Data", data)
                 if (data.error) {
                     console.log("Error")
+                    alert("We are unable to fetch real-time data at this time.")
                     return
                 }
                 resetMarkers()
@@ -230,7 +246,7 @@ export default function Home({ params }) {
                 setMarker(newMarkers)
                 console.log("Realtime Data added to map!")
             })
-
+        }
     }
     function mapLoad() {
 
@@ -344,7 +360,7 @@ export default function Home({ params }) {
         map.current.on('click', 'bus_stop', (e) => {
             const coordinates = e.features[0].geometry.coordinates.slice();
             //redirStop(e.features[0].properties.stop_id, e.features[0].properties.agency)
-            setRequest({ stop: e.features[0].properties.stop_id, agency: e.features[0].properties.agency, type: "stop", route: null })
+            setRequest({ stop: e.features[0].properties.stop_id, agency: e.features[0].properties.agency, type: "arrival", route: null })
 
             resetMarkers()
             while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
@@ -566,7 +582,10 @@ export default function Home({ params }) {
                                 ) : content.data ? (
                                     <div className={map_css.grow_parent}>
                                         <div className={map_css.arrv_title}>
-                                            <span className={map_css.route_span}>{content.dsc?.code}</span>
+                                            {content.dsc?.code ? (
+                                                <span className={map_css.route_span}>{content.dsc?.code}</span>
+                                            ) : null
+                                            }
                                             <p>{content.dsc?.text}</p>
                                         </div>
                                         <div className={map_css.arrv_scroll}>
@@ -574,7 +593,7 @@ export default function Home({ params }) {
                                                 content.data.map((x) => {
                                                     return (
                                                         <div key={Math.random()}>
-                                                            {content.type === "stop" && content.data ? (
+                                                            {(content.type === "stop" || content.type === "arrival") && content.data ? (
                                                                 <a onClick={() => {
                                                                     setRequest({ stop: x.stop_id, agency: request.agency, type: "route", route: x.trip_id })
                                                                     //addRoute(x.shape_id, request.agency)
@@ -613,27 +632,25 @@ export default function Home({ params }) {
                                                 })
                                             }
                                             {content.type === "stop" ? (
-                                                <div className={map_css.arrv_elem}>
-                                                    <div className={map_css.headsign}>
-                                                        <span className="material-symbols-rounded" style={{ paddingBlock: "1vh" }}>departure_board</span>
-                                                        <p>Advanced Search</p>
-                                                    </div>
-                                                    <br />
-                                                    <div className={map_css.adv_src}>
-                                                        <input className={map_css.no_bg} type="date" id="adv_dt" defaultValue={(() => {
-                                                            const dateStr = content.query.date?.toString() || '';
-                                                            const yyyy = dateStr.slice(0, 4);
-                                                            const mm = dateStr.slice(4, 6);
-                                                            const dd = dateStr.slice(6, 8);
-                                                            return `${yyyy}-${mm}-${dd}`;
-                                                        })()} />
-                                                        <input className={map_css.no_bg} type="time" id="adv_time" defaultValue={(() => {
+                                                <div className={map_css.adv_src}>
+                                                    <input
+                                                        className={map_css.no_bg} type="time" id="adv_time" defaultValue={(() => {
                                                             const timeStr = content.query.time?.toString() || '';
                                                             const hh = timeStr.slice(0, 2);
                                                             const mm = timeStr.slice(2, 4);
                                                             return `${hh}:${mm}`;
-                                                        })()} />
-                                                        <button className={button_css.large_txt} onClick={() => {
+                                                        })()}
+                                                        onBlur={() => {
+                                                            console.log("Time Changed")
+                                                            setRequest({
+                                                                stop: content.query.stop,
+                                                                agency: content.query.agency,
+                                                                type: "stop",
+                                                                time: document.getElementById("adv_time").value || undefined,
+                                                            })
+                                                        }}
+                                                    />
+                                                    {/*<button className={button_css.large_txt} onClick={() => {
                                                             setRequest({
                                                                 stop: content.query.stop,
                                                                 agency: content.query.agency,
@@ -644,9 +661,9 @@ export default function Home({ params }) {
                                                         }}>
                                                             <span className="material-symbols-rounded" style={{ paddingBlock: "1vh" }}>schedule</span>
                                                             <p>Search</p>
-                                                        </button>
-                                                    </div>
+                                                        </button>*/}
                                                 </div>
+
                                             ) : null}
                                         </div>
                                     </div>
@@ -656,7 +673,7 @@ export default function Home({ params }) {
                                             <p>Select a Stop or Search To Get Started</p>
                                         </div>
                                         <div>
-                                            <a href='https://github.com/Benjamin-Del/transit'><p>Benja Transit v3.7</p></a>
+                                            <a href='https://github.com/Benjamin-Del/transit'><p>Benja Transit v3.8</p></a>
                                         </div>
                                     </div>
                                 )}

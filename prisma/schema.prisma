@@ -1,10 +1,10 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model oc_calendar {
@@ -21,8 +21,8 @@ model oc_calendar {
 }
 
 model oc_calendar_dates {
-  service_id   String
-  date         String
+  service_id     String
+  date           String
   exception_type String?
 
   @@id([service_id, date])
@@ -59,8 +59,8 @@ model oc_stops {
   stop_id   String  @id
   stop_code String?
   stop_name String?
-  stop_lat  String?
-  stop_lon  String?
+  stop_lat  Float?
+  stop_lon  Float?
 }
 
 model oc_trips {
