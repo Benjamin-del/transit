@@ -211,41 +211,41 @@ export default function Home({ params }) {
         }
         console.log("realtime", realtime)
         if (realtime) {
-        await fetch("/api/gtfs/vehicle/" + agency + "?trip=" + uniqueRoutes)
-            .then((response) => response.json())
-            .then((data) => {
-                console.log("Realtime Data", data)
-                if (data.error) {
-                    console.log("Error")
-                    alert("We are unable to fetch real-time data at this time.")
-                    return
-                }
-                resetMarkers()
-                const newMarkers = []
-                data.arrivals.forEach((x) => {
-                    // Render React to String to add to popup
+            await fetch("/api/gtfs/vehicle/" + agency + "?trip=" + uniqueRoutes)
+                .then((response) => response.json())
+                .then((data) => {
+                    console.log("Realtime Data", data)
+                    if (data.error) {
+                        console.log("Error")
+                        alert("We are unable to fetch real-time data at this time.")
+                        return
+                    }
+                    resetMarkers()
+                    const newMarkers = []
+                    data.arrivals.forEach((x) => {
+                        // Render React to String to add to popup
 
-                    // Create Markers
+                        // Create Markers
 
-                    const popup = new mapboxgl.Popup()
-                        .setLngLat([x.longitude, x.latitude])
-                        .setHTML(('<div><h3>' + x.route + " " + (x.trip?.trip_headsign || "No Headsign") + '</h3><p>Bus: ' + x.vehicle.id + '</p></div>'))
-                        .addTo(map.current);
+                        const popup = new mapboxgl.Popup()
+                            .setLngLat([x.longitude, x.latitude])
+                            .setHTML(('<div><h3>' + x.route + " " + (x.trip?.trip_headsign || "No Headsign") + '</h3><p>Bus: ' + x.vehicle.id + '</p></div>'))
+                            .addTo(map.current);
 
-                    const el = document.createElement('div');
-                    el.className = map_css.marker;
-                    el.innerHTML = "<span class='material-symbols-rounded' style='font-size: 5vh; color: #004777'>directions_bus</span>";
-                    el.addEventListener('click', () => {
-                        if (!x.trip) return // Ignore if no trip
-                        //addRoute(x.trip.shape_id, agency)
-                        setRequest({ stop: x.stop_id, agency: agency, type: "route", route: x.trip.trip_id })
-                    });
-                    newMarkers.push(new mapboxgl.Marker(el).setLngLat([x.longitude, x.latitude]).setPopup(popup).addTo(map.current))
+                        const el = document.createElement('div');
+                        el.className = map_css.marker;
+                        el.innerHTML = "<span class='material-symbols-rounded' style='font-size: 5vh; color: #004777'>directions_bus</span>";
+                        el.addEventListener('click', () => {
+                            if (!x.trip) return // Ignore if no trip
+                            //addRoute(x.trip.shape_id, agency)
+                            setRequest({ stop: x.stop_id, agency: agency, type: "route", route: x.trip.trip_id })
+                        });
+                        newMarkers.push(new mapboxgl.Marker(el).setLngLat([x.longitude, x.latitude]).setPopup(popup).addTo(map.current))
+                    })
+
+                    setMarker(newMarkers)
+                    console.log("Realtime Data added to map!")
                 })
-
-                setMarker(newMarkers)
-                console.log("Realtime Data added to map!")
-            })
         }
     }
     function mapLoad() {
@@ -582,10 +582,14 @@ export default function Home({ params }) {
                                 ) : content.data ? (
                                     <div className={map_css.grow_parent}>
                                         <div className={map_css.arrv_title}>
-                                            {content.dsc?.code ? (
-                                                <span className={map_css.route_span}>{content.dsc?.code}</span>
-                                            ) : null
-                                            }
+                                        <span className={map_css.route_span}>
+                                            <div className={map_css.schedIfSp}>
+                                                <span className='material-symbols-rounded' style={{ paddingBlock: "1vh" }}>{
+                                                    content.type === "stop" ? "schedule" : content.type === "arrival" ? "sensors" : "route"
+                                            }</span>
+                                                {content.dsc?.code}
+                                            </div>
+                                        </span>
                                             <p>{content.dsc?.text}</p>
                                         </div>
                                         <div className={map_css.arrv_scroll}>
@@ -650,20 +654,19 @@ export default function Home({ params }) {
                                                             })
                                                         }}
                                                     />
-                                                    {/*<button className={button_css.large_txt} onClick={() => {
-                                                            setRequest({
-                                                                stop: content.query.stop,
-                                                                agency: content.query.agency,
-                                                                type: "stop",
-                                                                time: document.getElementById("adv_time").value || undefined,
-                                                                date: document.getElementById("adv_dt").value?.replace(/-/g, '') || undefined,
-                                                            })
-                                                        }}>
-                                                            <span className="material-symbols-rounded" style={{ paddingBlock: "1vh" }}>schedule</span>
-                                                            <p>Search</p>
-                                                        </button>*/}
                                                 </div>
 
+                                            ) : content.type === "arrival" ? (
+                                                <div className={map_css.adv_src}>
+                                                    <button onClick={() => {
+                                                        setRequest({
+                                                            stop: content.query.stop,
+                                                            agency: content.query.agency,
+                                                            type: "stop",
+                                                            time: undefined,
+                                                        })
+                                                    }}>View Schedule</button>
+                                            </div>
                                             ) : null}
                                         </div>
                                     </div>
@@ -673,7 +676,7 @@ export default function Home({ params }) {
                                             <p>Select a Stop or Search To Get Started</p>
                                         </div>
                                         <div>
-                                            <a href='https://github.com/Benjamin-Del/transit'><p>Benja Transit v3.8</p></a>
+                                            <a href='https://github.com/Benjamin-Del/transit'><p>Benja Transit v3.7</p></a>
                                         </div>
                                     </div>
                                 )}
