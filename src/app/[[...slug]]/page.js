@@ -129,6 +129,8 @@ export default function Home({ params }) {
     useEffect(() => {
         if (request.type === "splash") {
             setContent({ type: "splash", data: null })
+            resetMarkers()
+            removeRoute()
             return
         }
         if (!request.agency || !request.type) return // Ignore if no request
