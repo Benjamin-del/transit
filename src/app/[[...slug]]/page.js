@@ -70,7 +70,7 @@ export default function Home({ params }) {
             style: "mapbox://styles/mapbox/standard",
             center: [-75.70893955298494, 45.34824731651693],
             zoom: 10,
-            hash: "position",
+            //hash: "position",
             attributionControl: false
         });
         // Add navigation control (the +/- zoom buttons)
@@ -119,13 +119,27 @@ export default function Home({ params }) {
         }
 
         //If  Params (stop, agency, and type) are present, load the data
-        if (slug && (slug[1] === "stop" || slug[1] === "route" || slug[1] === "arrival")) {
-            setRequest({ stop: slug[2], agency: slug[0], type: slug[1], route: slug[2] })
-        }
+        navHndlr(slug)
+
+
+        // Add Event Listener for Popstate
+        window.addEventListener('popstate', (event) => {
+            // Get the updated URL
+            const params = window.location.pathname.split("/").filter((x) => x !== "")
+            //console.log(params)
+            navHndlr(params)
+        })
         // Clean up on unmount
         return () => map.current.remove();
     }, []);
 
+    function navHndlr(slug) {
+        //console.log("nh", slug)
+        if (slug && (slug[1] === "stop" || slug[1] === "route" || slug[1] === "arrival")) {
+            setRequest({ stop: slug[2], agency: slug[0], type: slug[1], route: slug[2] })
+        }
+
+    }
     useEffect(() => {
         if (request.type === "splash") {
             setContent({ type: "splash", data: null })
@@ -534,11 +548,18 @@ export default function Home({ params }) {
                 <div className={map_css.main_content}>
                     <div className={map_css.sidebar}>
                         <div className={map_css.sidebar_header}>
-                            {content?.type === "splash" ? (
+                            {/*content?.type === "splash" ? (
                                 <h1>Benja Transit</h1>
                             ) : null
-                            }
+                            */}
                             <div className={map_css.heading_child}>
+                                {(content.type !== "splash" || content.type !== "loading" ) && window?.history.length > 1  ? (
+                                    <div className={button_css.icon_flex}>
+                                        <button onClick={() => window.history.back()} className={button_css.icon_btn}>
+                                            <span className="material-symbols-rounded">arrow_back</span>
+                                        </button>
+                                    </div>
+                                ) : null}
                                 <input
                                     id="geolocate"
                                     placeholder='Search by Location'
@@ -584,14 +605,14 @@ export default function Home({ params }) {
                                 ) : content.data ? (
                                     <div className={map_css.grow_parent}>
                                         <div className={map_css.arrv_title}>
-                                        <span className={map_css.route_span}>
-                                            <div className={map_css.schedIfSp}>
-                                                <span className='material-symbols-rounded' style={{ paddingBlock: "1vh" }}>{
-                                                    content.type === "stop" ? "schedule" : content.type === "arrival" ? "sensors" : "route"
-                                            }</span>
-                                                {content.dsc?.code}
-                                            </div>
-                                        </span>
+                                            <span className={map_css.route_span}>
+                                                <div className={map_css.schedIfSp}>
+                                                    <span className='material-symbols-rounded' style={{ paddingBlock: "1vh" }}>{
+                                                        content.type === "stop" ? "schedule" : content.type === "arrival" ? "sensors" : "route"
+                                                    }</span>
+                                                    {content.dsc?.code}
+                                                </div>
+                                            </span>
                                             <p>{content.dsc?.text}</p>
                                         </div>
                                         <div className={map_css.arrv_scroll}>
@@ -656,6 +677,15 @@ export default function Home({ params }) {
                                                             })
                                                         }}
                                                     />
+                                                    <button onClick={() => {
+                                                        setRequest({
+                                                            stop: content.query.stop,
+                                                            agency: content.query.agency,
+                                                            type: "arrival",
+                                                            time: undefined,
+                                                        })
+                                                    }}>Current Arrivals</button>
+
                                                 </div>
 
                                             ) : content.type === "arrival" ? (
@@ -668,7 +698,7 @@ export default function Home({ params }) {
                                                             time: undefined,
                                                         })
                                                     }}>View Schedule</button>
-                                            </div>
+                                                </div>
                                             ) : null}
                                         </div>
                                     </div>
@@ -684,9 +714,11 @@ export default function Home({ params }) {
                                 )}
                             {(content.data && content.type !== "loading") ? (
                                 <div className={button_css.flex}>
+                                    {/*}
                                     <a className={button_css.large} onClick={() => gotoHighlight()}>
                                         <span className="material-symbols-rounded" style={{ paddingBlock: "1vh" }}>pin_drop</span>
                                     </a>
+                                    */}
                                     <a className={button_css.large} onClick={() => {
                                         // Copy Curent URL to Clipboard
                                         navigator.clipboard.writeText(window.location.href)
