@@ -4,6 +4,7 @@
     align-items: stretch;
     gap: 10px;
     padding-inline: 1vh;
+    padding-bottom: 1vh;
 }
 
 .icon_btn {
@@ -22,6 +23,7 @@
     align-items: stretch;
     gap: 10px;
     padding-inline: 1vh;
+    padding-bottom: 1vh;
 }
 .text_button {
     display: block;

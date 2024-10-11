@@ -145,6 +145,7 @@ export default function Home({ params }) {
             setContent({ type: "splash", data: null })
             resetMarkers()
             removeRoute()
+            window.history.pushState({ path: "/" }, '', "/")
             return
         }
         if (!request.agency || !request.type) return // Ignore if no request
@@ -458,20 +459,7 @@ export default function Home({ params }) {
         removeRoute()
 
     }
-    function gotoHighlight() {
-        console.log("gotoHighlight")
-        const element = document.querySelector('[stopref="true"]');
-        if (element) {
-            console.log("Found")
-            element.scrollIntoView({ behavior: 'smooth' });
-        }
-    }
-    function resetData() {
-        //setAgency(agency)
-        //setStop(stop)
-        resetMarkers()
-        removeRoute()
-    }
+
     function resetMarkers() {
         console.log("Resetting Markers")
         console.log(marker)
@@ -553,7 +541,7 @@ export default function Home({ params }) {
                             ) : null
                             */}
                             <div className={map_css.heading_child}>
-                                {(content.type !== "splash" || content.type !== "loading" ) && window?.history.length > 1  ? (
+                                {(content.type !== "splash" || content.type !== "loading" ) /*&& window?.history.length > 1*/  ? (
                                     <div className={button_css.icon_flex}>
                                         <button onClick={() => window.history.back()} className={button_css.icon_btn}>
                                             <span className="material-symbols-rounded">arrow_back</span>

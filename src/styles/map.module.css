@@ -21,10 +21,12 @@
 
 .arrv_scroll {
   overflow-x: scroll;
+  scrollbar-width: none;
 }
 
 .grow_parent {
-  flex-grow: 1;
+  flex-grow: 1; /* Allow the element to grow and take up remaining space */
+  overflow: auto; /* Prevent overflow */
   height: 20vh;
   display: flex;
   flex-direction: column;
@@ -256,80 +258,6 @@
   }
 }
 
-/*
-@media screen and (max-width: 768px) {
-
-  .main_content {
-    display: flex;
-    flex-direction: column-reverse;
-  }
-
-  .map_container {
-    width: 100%;
-    height: 60vh;
-  }
-
-  .sidebar {
-    width: 100%;
-    height: 40vh;
-  }
-
-  .arrv_scroll {
-    display: flex;
-    flex-direction: row;
-    margin-bottom: 0.5vh;
-  }
-
-  .arrv_scroll_5 {
-    height: 25vh;
-    display: flex;
-    flex-direction: row;
-  }
-
-  .arrv_parent {
-    height: 23vh;
-  }
-
-  .sidebar_header {
-    text-align: center;
-  }
-
-  .arrv_elem {
-    display: flex;
-    justify-content: flex-start;
-    align-items: flex-start;
-    flex-direction: row;
-    flex-wrap: wrap;
-    margin: 1vh;
-    border-radius: 1vh;
-    color: black;
-    width: 30vh;
-    flex: none;
-    background: #efefef;
-  }
-
-  .error {
-    width: 100%;
-  }
-
-  .logo {
-    display: none;
-  }
-
-  .no_content {
-    height: 25vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    color: #FF7700;
-    align-items: center;
-  }
-
-  .adv_src {
-    flex-direction: row;
-  }
-}
-*/
 .canceled {
   background: #FF7700;
   /*padding: 1vh; */
@@ -347,8 +275,6 @@
   display: flex;
   flex-direction: column;
   /*padding-bottom: 1vh;*/
-  max-height: -moz-fit-content;
-  max-height: fit-content;
   align-items: stretch;
   justify-content: space-between;
   gap: 1.5vh;
