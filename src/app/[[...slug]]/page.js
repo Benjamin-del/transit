@@ -8,7 +8,6 @@ import button_css from '../../styles/button.module.css'
 import 'mapbox-gl/dist/mapbox-gl.css';
 import 'material-symbols';
 
-const URL = process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : process.env.URL
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_KEY;
 
@@ -16,12 +15,6 @@ export default function Home({ params }) {
 
     const { slug } = params
 
-    /*
-        params array
-        (0) agency
-        (1) type - stop, trip
-        (2) id - stop or tripid
-    */
     const mapContainerRef = useRef(null);
     const map = useRef(null);
 
@@ -70,7 +63,6 @@ export default function Home({ params }) {
             style: "mapbox://styles/mapbox/standard",
             center: [-75.70893955298494, 45.34824731651693],
             zoom: 10,
-            //hash: "position",
             attributionControl: false
         });
         // Add navigation control (the +/- zoom buttons)
@@ -82,11 +74,6 @@ export default function Home({ params }) {
             },
             trackUserLocation: true
         }), 'top-right');
-        // Add attribution control
-        /*map.current.addControl(new mapboxgl.AttributionControl({
-            customAttribution: 'Last GTFS Update: ' + day.toFormat("yyyy-MM-dd") + " <a href='/notices'>Data Sources</a>"
-        }));*/
-        // Configure Mapbox Standard Styles
 
         map.current.on('load', () => {
             map.current.setConfigProperty('basemap', 'showTransitLabels', false);
