@@ -1,3 +1,7 @@
+
+// Description: This file is used to query a stop by its ID and agency ID.
+// Usage: GET /api/geo/query_stop?id=:stop_id&agency=:agency_id
+
 import * as turf from '@turf/helpers'
 
 import agency from "../../../../../helpers/agency";

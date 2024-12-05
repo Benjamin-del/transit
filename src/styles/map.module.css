@@ -25,8 +25,10 @@
 }
 
 .grow_parent {
-  flex-grow: 1; /* Allow the element to grow and take up remaining space */
-  overflow: auto; /* Prevent overflow */
+  flex-grow: 1;
+  /* Allow the element to grow and take up remaining space */
+  overflow: auto;
+  /* Prevent overflow */
   height: 20vh;
   display: flex;
   flex-direction: column;
@@ -42,6 +44,7 @@
   padding: 1vh;
   justify-content: space-between;
   align-items: center;
+  gap: 1vh;
 }
 
 .heading_child {
@@ -229,7 +232,7 @@
     flex-direction: column-reverse;
     height: 100%;
     justify-content: flex-end;
-    }
+  }
 
   .map_container {
     width: 100%;

@@ -1,3 +1,7 @@
+
+// Description: Returns the real-time updates for a specific route, uses static data from the GTFS-RT feed, to detemine on-time status
+// Usage: GET /api/gtfs/updates/:agency?trip=:trip_id
+
 import { DateTime } from "luxon";
 
 import { PrismaClient } from '@prisma/client/edge'
@@ -64,6 +68,22 @@ export async function GET(req) {
         }
     })
 
+    const stTimes = await prisma[agencyInfo.db.stop_times].findMany({
+        where: {
+            AND: [
+                {
+                    stop_id: stop
+                },
+                {
+                    trip_id: {
+                        in: tripInfo.map(x => x.trip_id)
+                    }
+                }
+            ]
+        }
+    })
+
+
     /*
       {
     "id": "153999",
@@ -84,8 +104,16 @@ export async function GET(req) {
         const trip = tripInfo.filter((y) => {
             return y.trip_id === x.trip_id
         })[0] // Get the trip info
- 
+
         const arrvTime = DateTime.fromSeconds(Number(x.arrival_time)).setZone("America/Toronto")
+
+        const refStTime = stTimes.filter(y => y.trip_id === x.trip_id)[0]
+
+        const refStTimeObj = refStTime ? DateTime.fromFormat(refStTime.arrival_time, "HH:mm:ss") : null
+
+
+        const arrvStDiff = Math.round(arrvTime.diff(refStTimeObj, "minutes").toObject().minutes)
+        const arrvStDiffStr = arrvStDiff > 0 ? (arrvStDiff + " minutes late") : (arrvStDiff < 0 ? (Math.abs(arrvStDiff) + " minutes early") : "On time")
 
         // Get arrival in minutes compared to current time
         const diff = Math.round(arrvTime.diffNow("minutes").toObject().minutes) + " minutes (" + arrvTime.toFormat("HH:mm") + ")"
@@ -93,13 +121,19 @@ export async function GET(req) {
             route: trip?.route_id,
             service_id: trip?.service_id,
             arrv: diff,
-            attribute: "Arriving in:",
+            attribute: "Arriving in",
             trip_id: x.trip_id,
             trip_headsign: trip?.trip_headsign,
             dir: trip?.direction_id,
             block: trip.block_id,
             shape_id: trip?.shape_id,
-            active: trip ? true : false
+            active: trip ? true : false,
+            status: {
+                schedule_time: refStTime ? refStTime.arrival_time : null,
+                scheduled: refStTime ? true : false,
+                scheduled_diff: arrvStDiffStr,
+                scheduled_diff_min: arrvStDiff
+            }
         }
     }).filter(x => {
         return x.active /*&& x.arrv > 0*/
@@ -120,7 +154,7 @@ export async function GET(req) {
             agency: agencyID
         },
         stop: stopInfo,
-        schedule: arrivalMap
+        schedule: arrivalMap,
     }), {
         status: 200,
         headers: {

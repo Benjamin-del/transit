@@ -1,3 +1,6 @@
+
+// Description: This file is used to get the shape of a route.
+// Usage: GET /api/geo/shape?id=:shape_id&agency=:agency_id
 import * as turf from '@turf/helpers'
 //import centroid from '@turf/centroid'
 

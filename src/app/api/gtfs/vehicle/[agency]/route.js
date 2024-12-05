@@ -1,3 +1,7 @@
+
+// Description: Returns the real-time vehicle positions for a given route or trip. Either 'trip' or 'route' query parameters are required
+// Usage: GET /api/gtfs/vehicle/:agency?trip=:trip_id&route=:route_id
+
 import { PrismaClient } from '@prisma/client/edge'
 const prisma = new PrismaClient()
 

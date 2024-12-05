@@ -1,3 +1,7 @@
+
+// Description: This file defines the route for the config endpoint. It returns the configuration of the agencies and their tables. (removes sensitive data)
+// Usage: GET /api/config
+
 import agConfig from "../../../../config.json"
 export const runtime = "edge"
 

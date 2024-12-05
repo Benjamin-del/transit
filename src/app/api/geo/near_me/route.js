@@ -1,4 +1,8 @@
 
+// NOTE: This API route is no longer in use, and is kept for reference purposes only.
+// Description: This API fetches the stops within a certain distance of a given location.
+// Usage: GET /api/geo/near_me?lat=:lat&lon=:lon&distance=:distance&agency=:agency
+
 import { distance } from "@turf/distance";
 
 import { point } from "@turf/helpers";

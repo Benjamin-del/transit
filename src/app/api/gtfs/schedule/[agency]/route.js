@@ -1,3 +1,7 @@
+
+// Description: Returns the schedule for a specific stop. 'date' and 'time' query parameters are optional, used to filter results. 'plus' query parameter is optional, used to extend the search window
+// Usage: GET /api/gtfs/schedule/:agency?stop=:stop_id&date=:date&time=:time&plus=:plus
+
 import { DateTime } from "luxon";
 
 import { PrismaClient } from '@prisma/client/edge'

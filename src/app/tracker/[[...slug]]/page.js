@@ -1,10 +1,10 @@
 "use client"
 
-import React, { useRef, useEffect, useState, useContext } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 
 import mapboxgl from 'mapbox-gl';
-import map_css from '../../styles/map.module.css'
-import button_css from '../../styles/button.module.css'
+import map_css from '../../../styles/map.module.css'
+import button_css from '../../../styles/button.module.css'
 import 'mapbox-gl/dist/mapbox-gl.css';
 import 'material-symbols';
 
@@ -13,8 +13,9 @@ mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_KEY;
 
 export default function Home({ params }) {
 
-    const { slug } = params
+    const { slug } = React.use(params)
 
+    console.log(slug)
     const mapContainerRef = useRef(null);
     const map = useRef(null);
 
@@ -110,7 +111,7 @@ export default function Home({ params }) {
 
 
         // Add Event Listener for Popstate
-        window.addEventListener('popstate', (event) => {
+        window.addEventListener('popstate', (event) => { // for some reason with won't fire when window.history.back() is called, take a look at refreshURLParams for the logic on that
             // Get the updated URL
             const params = window.location.pathname.split("/").filter((x) => x !== "")
             //console.log(params)
@@ -120,54 +121,51 @@ export default function Home({ params }) {
         return () => map.current.remove();
     }, []);
 
-    function navHndlr(slug) {
+    function navHndlr(slug) { // Function to handle the URL Params
         //console.log("nh", slug)
         if (slug && (slug[1] === "stop" || slug[1] === "route" || slug[1] === "arrival")) {
-            setRequest({ stop: slug[2], agency: slug[0], type: slug[1], route: slug[2] })
+            setRequest({ stop: slug[2], type: slug[1], route: slug[2] })
         }
 
     }
-    useEffect(() => {
+    useEffect(() => { // When the Request Object is updated, fetch the data from the API
         if (request.type === "splash") {
             setContent({ type: "splash", data: null })
             resetMarkers()
             removeRoute()
-            window.history.pushState({ path: "/" }, '', "/")
+            window.history.pushState({ path: "/tracker/" }, '', "/tracker/")
             return
         }
-        if (!request.agency || !request.type) return // Ignore if no request
+        if (/*!request.agency || */!request.type) return // Ignore if no request, Agency should be a constant, so no need to check
         setContent({ type: "loading", data: null })
         resetMarkers()
 
-        if (/*request.stop && */ request.agency && request.type) {
+        if (/*request.stop &&  request.agency && */ request.type) {
             if (request.type === "stop" /* Replacing Realtime & Static info stop, will query for both */) {
                 console.log("Requesting Schedule Data")
-                configStatSched(request.agency, request.stop, (request.time || undefined), (request.date || undefined), false)
+                configStatSched(request.stop, (request.time || undefined), (request.date || undefined), false) // Static Data, if undefined, will default to current time
             } else if (request.type === "arrival") {
                 console.log("Requesting Realtime Data")
-                configStatSched(request.agency, request.stop, undefined, undefined, true)
+                configStatSched(request.stop, undefined, undefined, true) // Realtime Data, undefineds hold order
             } else if (request.type === "route") {
                 console.log("Requesting Trip Data")
-                getTripInfo(request.agency, request.route, (request.stop || undefined))
+                getTripInfo(request.route, (request.stop || undefined)) // User requests to see bus route/shape on map.
             } else {
                 console.log("Unknown Request Type", request.type)
             }
         }
     }, [request])
 
-    async function configStatSched(agency, stop, time, date, realtime) {
+    async function configStatSched(stop, time, date, realtime) { // Main function to fetch data from the API, including RT data
 
-        if (realtime) {
-            window.history.pushState({ path: "/" + agency + "/arrival/" + stop }, '', "/" + agency + "/arrival/" + stop)
-        } else {
-            window.history.pushState({ path: "/" + agency + "/stop/" + stop }, '', "/" + agency + "/stop/" + stop)
-        }
+        window.history.pushState({ path: "/tracker/" + slug[0] + "/" + (realtime ? "arrival" : "stop") + "/" + stop }, '', "/tracker/" + slug[0] + "/" + (realtime ? "arrival" : "stop") + "/" + stop)
+
         const staticData = await fetch("/api/gtfs/" + (function () {
             if (realtime) {
                 return "updates"
             }
             return "schedule"
-        }()) + "/" + agency + "?stop=" + stop + "&time=" + time + "&date=" + date) // Fetch Static Data
+        }()) + "/" + slug[0] + "?stop=" + stop + "&time=" + time + "&date=" + date) // Fetch Static Data
             .then((response) => response.json())
             .then((data) => {
                 console.log("Static Data", data)
@@ -215,7 +213,7 @@ export default function Home({ params }) {
         }
         console.log("realtime", realtime)
         if (realtime) {
-            await fetch("/api/gtfs/vehicle/" + agency + "?trip=" + uniqueRoutes)
+            await fetch("/api/gtfs/vehicle/" + slug[0] + "?trip=" + uniqueRoutes)
                 .then((response) => response.json())
                 .then((data) => {
                     console.log("Realtime Data", data)
@@ -242,7 +240,7 @@ export default function Home({ params }) {
                         el.addEventListener('click', () => {
                             if (!x.trip) return // Ignore if no trip
                             //addRoute(x.trip.shape_id, agency)
-                            setRequest({ stop: x.stop_id, agency: agency, type: "route", route: x.trip.trip_id })
+                            setRequest({ stop: x.stop_id, type: "route", route: x.trip.trip_id })
                         });
                         newMarkers.push(new mapboxgl.Marker(el).setLngLat([x.longitude, x.latitude]).setPopup(popup).addTo(map.current))
                     })
@@ -252,19 +250,19 @@ export default function Home({ params }) {
                 })
         }
     }
-    function mapLoad() {
+    function mapLoad() { // When the map is loaded, add the sources and layers
 
         console.log("Loaded Map!")
         map.current.addSource('all_stops', {
             type: 'geojson',
             // Point to GeoJSON data for stops
-            data: '/api/geo/all_stops',
+            data: '/api/geo/stops/?agency=' + slug[0],
             cluster: true,
             clusterMaxZoom: 14, // Max zoom to cluster points on
             clusterRadius: 50 // Radius of each cluster when clustering points (defaults to 50)
         });
 
-        map.current.addLayer({
+        map.current.addLayer({ // Add a layer for the stops' clusters (circles)
             id: 'clusters',
             type: 'circle',
             source: 'all_stops',
@@ -292,7 +290,7 @@ export default function Home({ params }) {
             }
         });
 
-        map.current.addLayer({
+        map.current.addLayer({ // Add a layer for the stops' count (text)
             id: 'cluster-count',
             type: 'symbol',
             source: 'all_stops',
@@ -307,8 +305,7 @@ export default function Home({ params }) {
             }
         });
 
-        // Use bus icon for bus stops
-        map.current.addLayer({
+        map.current.addLayer({ // Add a layer for the stops (using bus icon)
             id: 'bus_stop',
             type: 'symbol',
             source: 'all_stops',
@@ -320,8 +317,7 @@ export default function Home({ params }) {
                 'icon-ignore-placement': true
             }
         });
-        // Add a layer for the stops' names
-        map.current.addLayer({
+        map.current.addLayer({ // Add a layer for the stops' names
             id: "stop_labels",
             type: "symbol",
             source: "all_stops",
@@ -339,7 +335,7 @@ export default function Home({ params }) {
 
         })
 
-        map.current.on('click', 'clusters', (e) => {
+        map.current.on('click', 'clusters', (e) => { // When a cluster is clicked, zoom in
             const features = map.current.queryRenderedFeatures(e.point, {
                 layers: ['clusters']
             });
@@ -357,14 +353,9 @@ export default function Home({ params }) {
             );
         });
 
-        // When a click event occurs on a feature in
-        // the unclustered-point layer, open a popup at
-        // the location of the feature, with
-        // description HTML from its properties.
         map.current.on('click', 'bus_stop', (e) => {
             const coordinates = e.features[0].geometry.coordinates.slice();
-            //redirStop(e.features[0].properties.stop_id, e.features[0].properties.agency)
-            setRequest({ stop: e.features[0].properties.stop_id, agency: e.features[0].properties.agency, type: "arrival", route: null })
+            setRequest({ stop: e.features[0].properties.stop_id, type: "arrival", route: null })
 
             resetMarkers()
             while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
@@ -380,7 +371,7 @@ export default function Home({ params }) {
         });
     }
 
-    async function search() {
+    async function search() { // When the Search bar is used, geolocate the location and fly to it (using osm nominatim)
 
         const request = await fetch("/api/geo/geolocate?q=" + document.getElementById("geolocate").value)
 
@@ -397,6 +388,14 @@ export default function Home({ params }) {
         }
     }
 
+    function refreshURLParams(window) { // When Back Arrow is used, bring the user back 1 increment in history, and update the Request Object with the new 
+
+        window.history.back()    
+        const params = window.location.pathname.split("/").filter((x) => x !== "" && x !== "tracker")
+
+        setRequest({ stop: slug[2], type: slug[1], route: slug[2] })
+
+    }
     function qryrf() {
         const fts = map.current.queryRenderedFeatures({ layers: ['bus_stop'] }).filter((x) => {
             return x.properties.stop_name.toLowerCase().includes(document.getElementById("geolocate").value.toLowerCase()) || x.properties.stop_code.toLowerCase().includes(document.getElementById("geolocate").value.toLowerCase())
@@ -405,12 +404,12 @@ export default function Home({ params }) {
         console.log(fts)
     }
 
-    async function getTripInfo(agency, trip, stop) {
+    async function getTripInfo(trip, stop) {
         console.log("Loading Trip Info")
 
-        window.history.pushState({ path: "/" + agency + "/route/" + trip }, '', "/" + agency + "/route/" + trip)
+        window.history.pushState({ path: "/tracker/" + slug[0] + "/route/" + trip }, '', "/tracker/" + slug[0] + "/route/" + trip)
 
-        const request = await fetch("/api/gtfs/trips/" + agency + "?trip=" + trip + "&stop=" + stop)
+        const request = await fetch("/api/gtfs/trips/" + slug[0] + "?trip=" + trip + "&stop=" + stop)
         const response = await request.json()
         console.log(response)
         if (response.error) {
@@ -433,12 +432,12 @@ export default function Home({ params }) {
                 }
             })
 
-            addRoute(response.tripInfo.shape_id, agency)
+            addRoute(response.tripInfo.shape_id)
         }
     }
-    function redirStop(stop, agency) {
+    function redirStop(stop) {
         // Replace with setRequest
-        setRequest({ stop: stop, agency: agency, type: "stop", route: null })
+        setRequest({ stop: stop, type: "stop", route: null })
         //setAgency(agency)
         //setStop(stop)
 
@@ -479,13 +478,13 @@ export default function Home({ params }) {
         }
         console.log("Removed Route!")
     }
-    function addRoute(shape_id, agency) {
+    function addRoute(shape_id) {
         removeRoute()
 
         map.current.addSource('context_rt_src', {
             type: 'geojson',
             // Use a URL for the value for the `data` property.
-            data: '/api/geo/shape?agency=' + agency + '&id=' + shape_id
+            data: '/api/geo/shape?agency=' + slug[0] + '&id=' + shape_id
         });
 
         map.current.addLayer({
@@ -530,7 +529,9 @@ export default function Home({ params }) {
                             <div className={map_css.heading_child}>
                                 {(content.type !== "splash" || content.type !== "loading" ) /*&& window?.history.length > 1*/  ? (
                                     <div className={button_css.icon_flex}>
-                                        <button onClick={() => window.history.back()} className={button_css.icon_btn}>
+                                        <button onClick={() => {
+                                            refreshURLParams(window)
+                                        }} className={button_css.icon_btn}>
                                             <span className="material-symbols-rounded">arrow_back</span>
                                         </button>
                                     </div>
@@ -573,9 +574,7 @@ export default function Home({ params }) {
                                 ) : content.data?.length === 0 ? (
                                     <div className={map_css.no_content}>
                                         <span className="material-symbols-rounded" style={{ fontSize: "10vh" }}>error</span>
-                                        <p>We were unable to find any {
-                                            content.type === "stop" ? "departures" : content.type === "route" ? "routes" : "Data"
-                                        }</p>
+                                        <p>{content.type === "arrival" ? "No Arrivals Found" : content.type === "stop" ? "No Departures Found" : ""}</p>
                                     </div>
                                 ) : content.data ? (
                                     <div className={map_css.grow_parent}>
@@ -597,7 +596,7 @@ export default function Home({ params }) {
                                                         <div key={Math.random()}>
                                                             {(content.type === "stop" || content.type === "arrival") && content.data ? (
                                                                 <a onClick={() => {
-                                                                    setRequest({ stop: x.stop_id, agency: request.agency, type: "route", route: x.trip_id })
+                                                                    setRequest({ stop: x.stop_id, type: "route", route: x.trip_id })
                                                                     //addRoute(x.shape_id, request.agency)
                                                                 }}>
                                                                     <div className={map_css.arrv_elem}>
@@ -610,12 +609,14 @@ export default function Home({ params }) {
                                                                         <p>
                                                                             {x.attribute + " "}
                                                                             {x.arrv}
+                                                                            <br />
+                                                                            { x.status?.scheduled_diff ? x.status?.scheduled_diff  : null}
                                                                         </p>
                                                                     </div>
                                                                 </a>
                                                             ) : content.type === "route" && content.data ? (
                                                                 <a onClick={() => {
-                                                                    redirStop(x.stop.id, request.agency)
+                                                                    redirStop(x.stop.id)
 
                                                                 }}>
                                                                     <div className={map_css.arrv_elem}>
@@ -646,7 +647,6 @@ export default function Home({ params }) {
                                                             console.log("Time Changed")
                                                             setRequest({
                                                                 stop: content.query.stop,
-                                                                agency: content.query.agency,
                                                                 type: "stop",
                                                                 time: document.getElementById("adv_time").value || undefined,
                                                             })
@@ -655,7 +655,6 @@ export default function Home({ params }) {
                                                     <button onClick={() => {
                                                         setRequest({
                                                             stop: content.query.stop,
-                                                            agency: content.query.agency,
                                                             type: "arrival",
                                                             time: undefined,
                                                         })
@@ -668,7 +667,6 @@ export default function Home({ params }) {
                                                     <button onClick={() => {
                                                         setRequest({
                                                             stop: content.query.stop,
-                                                            agency: content.query.agency,
                                                             type: "stop",
                                                             time: undefined,
                                                         })
@@ -683,7 +681,7 @@ export default function Home({ params }) {
                                             <p>Select a Stop or Search To Get Started</p>
                                         </div>
                                         <div>
-                                            <a href='https://github.com/Benjamin-Del/transit'><p>Benja Transit v3.7</p></a>
+                                            <a href='https://github.com/Benjamin-Del/transit'><p>LongitudeTransit v3.7</p></a>
                                         </div>
                                     </div>
                                 )}

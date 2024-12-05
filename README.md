@@ -1,4 +1,4 @@
-# Benja Transit
+# Longitude Transit
 
 A Simple and User-Friendly User Interface for tracking the location of busses in realtime via the GTFS-RT Feed, and is "lite" enough to fit in the free teir of all services used by the application. The entire application is built using Next.js, React, Prisma ORM and Prisma Accelerate (DB Proxy). The application is designed to be easy to modify and customize, to fit the needs of any transit agency or user.
 
@@ -20,10 +20,6 @@ Use a GTFS Compliant Feed to provide schedule data, and a GTFS-RT Feed to provid
 I built the project to use Prisma ORM with a PostgreSQL database. You can modify the database to use any other database that Prisma supports. [See Prisma Docs](https://www.prisma.io/docs/orm)
 
 To ensure that the database is up to date, you can use pgAdmin to update it manually, by dowloading the GTFS file (.zip) and importing it into the database by the CSV import tool. You can also automate this process by using a CI/CD pipeline to update the database on a schedule. I decided to build a tool that does this for me, [TransitDB3](https://github.com/benjamin-del/TransitDB3). (Originally built to upload the data to Github Pages, and have this project fetch the data from there)
-
-### Data Explorer
-
-To be able to explore the data, you can use the explorer tool built into the project. This tool allows you to see the relationships between routes and stops in a simple and intuitive way. When the project is running, you can access the explorer by going to the `/explore` route. (e.g. `localhost:3000/explore`)
 
 ## Getting Started
 

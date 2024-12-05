@@ -1,3 +1,7 @@
+
+// Description: This API that fetches the last 5 runs of a GitHub Actions workflow, used in client facing notices page
+// Usage: GET /api/status
+ 
 export const runtime = "edge"
 
 export async function GET() {

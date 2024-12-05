@@ -10,6 +10,7 @@
     "postinstall": "npx prisma generate --no-engine"
   },
   "dependencies": {
+    "@mui/material": "^6.1.6",
     "@prisma/client": "^5.15.0",
     "@prisma/extension-accelerate": "^1.1.0",
     "@turf/bbox": "^7.0.0",
@@ -23,7 +24,7 @@
     "luxon": "^3.4.3",
     "mapbox-gl": "^3.0.1",
     "material-symbols": "^0.21.0",
-    "next": "^14.2.8",
+    "next": "^15.0.3",
     "postcss": "^8.4.33",
     "prisma": "^5.15.0",
     "react": "^18.3.1",

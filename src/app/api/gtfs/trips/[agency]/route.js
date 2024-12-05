@@ -1,3 +1,7 @@
+
+// Description: Returns the stops for a specific trip, uses static data from GTFS feed. 'stop' query parameter is optional, used to highlight current stop
+// Usage: GET /api/gtfs/trips/:agency?trip=:trip_id&stop=:stop_id
+
 import { DateTime } from "luxon";
 
 import { PrismaClient } from '@prisma/client/edge'

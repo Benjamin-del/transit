@@ -21,5 +21,5 @@ export default function RootLayout({ children }) {
     )
   }
 export const metadata = {
-  title: 'Benja Transit | NCR Public Transit Tracker',
+  title: 'LongitudeTransit | Ottawa Public Transit Tracker',
 }

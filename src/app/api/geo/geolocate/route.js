@@ -1,3 +1,7 @@
+
+// Description: This is a simple API that uses the OpenStreetMap Nominatim API to get the location of a given query.
+// Usage: GET /api/geo/geolocate?q=:query
+
 export const runtime = "edge"
 
 export async function GET(req) {

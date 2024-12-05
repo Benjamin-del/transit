@@ -1,3 +1,7 @@
+/* 
+    Route not in use! Replaced by GET /api/geo/stops
+*/
+
 import * as turf from '@turf/helpers';
 
 export const runtime = "edge"
