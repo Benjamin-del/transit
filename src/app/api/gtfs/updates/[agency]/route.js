@@ -109,8 +109,7 @@ export async function GET(req) {
 
         const refStTime = stTimes.filter(y => y.trip_id === x.trip_id)[0]
 
-        const refStTimeObj = refStTime ? DateTime.fromFormat(refStTime.arrival_time, "HH:mm:ss") : null
-
+        const refStTimeObj = refStTime ? DateTime.fromFormat(refStTime.arrival_time, "HH:mm:ss").setZone("America/Toronto") : null
 
         const arrvStDiff = Math.round(arrvTime.diff(refStTimeObj, "minutes").toObject().minutes)
         const arrvStDiffStr = arrvStDiff > 0 ? (arrvStDiff + " minutes late") : (arrvStDiff < 0 ? (Math.abs(arrvStDiff) + " minutes early") : "On time")
