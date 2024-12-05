@@ -10,6 +10,8 @@
     "postinstall": "npx prisma generate --no-engine"
   },
   "dependencies": {
+    "@emotion/react": "^11.13.5",
+    "@mui/icons-material": "^6.1.10",
     "@mui/material": "^6.1.6",
     "@prisma/client": "^5.15.0",
     "@prisma/extension-accelerate": "^1.1.0",

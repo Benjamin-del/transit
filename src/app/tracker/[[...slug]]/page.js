@@ -681,7 +681,7 @@ export default function Home({ params }) {
                                             <p>Select a Stop or Search To Get Started</p>
                                         </div>
                                         <div>
-                                            <a href='https://github.com/Benjamin-Del/transit'><p>LongitudeTransit v3.7</p></a>
+                                            <a href='https://github.com/Benjamin-Del/transit'><p>LongitudeTransit v3.8</p></a>
                                         </div>
                                     </div>
                                 )}
