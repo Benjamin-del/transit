@@ -109,13 +109,14 @@ export async function GET(req) {
 
         const refStTime = stTimes.filter(y => y.trip_id === x.trip_id)[0]
 
-        const refStTimeObj = refStTime ? DateTime.fromFormat(refStTime.arrival_time, "HH:mm:ss").setZone("America/Toronto") : null
+        const refStTimeObj = refStTime ? DateTime.fromFormat(refStTime.arrival_time, "HH:mm:ss").setZone("America/Toronto", { keepLocalTime: true}) : null
 
-        const arrvStDiff = Math.round(arrvTime.diff(refStTimeObj, "minutes").toObject().minutes)
-        const arrvStDiffStr = arrvStDiff > 0 ? (arrvStDiff + " minutes late") : (arrvStDiff < 0 ? (Math.abs(arrvStDiff) + " minutes early") : "On time")
+        const arrvStDiff = Math.round(refStTimeObj.diff(arrvTime, "minutes").toObject().minutes)
+        const arrvStDiffStr = arrvStDiff < 0 ? (Math.abs(arrvStDiff) + " minutes late") : arrvStDiff > 0 ? (Math.abs(arrvStDiff) + " minutes early") : "On time"
 
         // Get arrival in minutes compared to current time
         const diff = Math.round(arrvTime.diffNow("minutes").toObject().minutes) + " minutes (" + arrvTime.toFormat("HH:mm") + ")"
+        console.log(arrvTime.diffNow("minutes").toObject().minutes)
         return {
             route: trip?.route_id,
             service_id: trip?.service_id,
@@ -131,7 +132,9 @@ export async function GET(req) {
                 schedule_time: refStTime ? refStTime.arrival_time : null,
                 scheduled: refStTime ? true : false,
                 scheduled_diff: arrvStDiffStr,
-                scheduled_diff_min: arrvStDiff
+                scheduled_diff_min: arrvStDiff,
+                /*x_refStTimeObj: refStTimeObj,
+                x_arrvTime: arrvTime*/
             }
         }
     }).filter(x => {
