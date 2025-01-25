@@ -1,10 +1,10 @@
 "use client"
-
+// Current TASK, MOVE OVER TO NEW API ENDPOINT (/api/gtfs/unified/ag)
 import React, { useRef, useEffect, useState } from 'react';
 
 import mapboxgl from 'mapbox-gl';
-import map_css from '../../../styles/map.module.css'
-import button_css from '../../../styles/button.module.css'
+import map_css from '../../../../styles/map.module.css'
+import button_css from '../../../../styles/button.module.css'
 import 'mapbox-gl/dist/mapbox-gl.css';
 import 'material-symbols';
 
@@ -13,9 +13,9 @@ mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_KEY;
 
 export default function Home({ params }) {
 
-    const { slug } = React.use(params)
+    const { slug, agency} = React.use(params)
 
-    console.log(slug)
+    console.log(slug, agency)
     const mapContainerRef = useRef(null);
     const map = useRef(null);
 
@@ -123,8 +123,8 @@ export default function Home({ params }) {
 
     function navHndlr(slug) { // Function to handle the URL Params
         //console.log("nh", slug)
-        if (slug && (slug[1] === "stop" || slug[1] === "route" || slug[1] === "arrival")) {
-            setRequest({ stop: slug[2], type: slug[1], route: slug[2] })
+        if (slug && (slug[0] === "stop" || slug[0] === "route" || slug[0] === "arrival")) {
+            setRequest({ stop: slug[1], type: slug[0], route: slug[1] })
         }
 
     }
@@ -158,14 +158,14 @@ export default function Home({ params }) {
 
     async function configStatSched(stop, time, date, realtime) { // Main function to fetch data from the API, including RT data
 
-        window.history.pushState({ path: "/tracker/" + slug[0] + "/" + (realtime ? "arrival" : "stop") + "/" + stop }, '', "/tracker/" + slug[0] + "/" + (realtime ? "arrival" : "stop") + "/" + stop)
+        window.history.pushState({ path: "/tracker/" + agency + "/" + (realtime ? "arrival" : "stop") + "/" + stop }, '', "/tracker/" + agency + "/" + (realtime ? "arrival" : "stop") + "/" + stop)
 
         const staticData = await fetch("/api/gtfs/" + (function () {
             if (realtime) {
-                return "updates"
+                return "unified" // Move to Unified API endpoint
             }
             return "schedule"
-        }()) + "/" + slug[0] + "?stop=" + stop + "&time=" + time + "&date=" + date) // Fetch Static Data
+        }()) + "/" + agency + "?stop=" + stop + "&time=" + time + "&date=" + date) // Fetch Static Data
             .then((response) => response.json())
             .then((data) => {
                 console.log("Static Data", data)
@@ -186,7 +186,7 @@ export default function Home({ params }) {
                 console.log("query", data.query)
                 setContent({
                     type: realtime ? "arrival" : "stop",
-                    data: data.schedule,
+                    data: data.schedule || data.arrivals || [],
                     query: data.query,
                     dsc: {
                         code: data.stop.stop_code,
@@ -205,15 +205,50 @@ export default function Home({ params }) {
                 }
                 return { data: data, type: "static" }
             })
-        const uniqueRoutes = [...new Set(staticData.data.schedule.map((x) => x.trip_id))].join(",")
+        /*const uniqueRoutes = [...new Set(staticData.data.schedule.map((x) => x.trip_id))].join(",")
         console.log(uniqueRoutes) // Instead of going by trips param, I am going to go by route and have an ioption to view the trip on the sidebar (Implement Later)
         if (uniqueRoutes === "") {
             console.log("No Routes")
             return
-        }
+        }*/
         console.log("realtime", realtime)
-        if (realtime) {
-            await fetch("/api/gtfs/vehicle/" + slug[0] + "?trip=" + uniqueRoutes)
+
+        if (realtime && content.data) {
+            const gpsPositions = content.data?.filter((x) =>{ 
+                console.log(x.assigned)
+                return x.assigned.vehicle === true && x.position
+            }) // Filter out buses that are not assigned
+            resetMarkers()
+
+            const newMarkers = []
+            console.log("positions", gpsPositions)
+            gpsPositions.forEach((x) => {
+                // Render React to String to add to popup
+
+                // Create Markers
+
+                const popup = new mapboxgl.Popup()
+                    .setLngLat([x.position.lon, x.position.lat])
+                    .setHTML(('<div><h3>' + x.trip.route_id + " " + (x.trip.trip_headsign || "No Headsign") + '</h3><p>Bus: ' + x.position.id + '</p></div>'))
+                    .addTo(map.current);    
+
+                
+                const el = document.createElement('div');
+                el.className = map_css.marker;
+                el.innerHTML = "<span class='material-symbols-rounded' style='font-size: 5vh; color: #004777'>directions_bus</span>";
+                el.addEventListener('click', () => {
+                    if (!x.trip) return // Ignore if no trip
+                    //addRoute(x.trip.shape_id, agency)
+                    setRequest({ stop: x.stop_id, type: "route", route: x.trip.trip_id })
+                });
+                newMarkers.push(new mapboxgl.Marker(el).setLngLat([x.position.lon, x.position.lat]).setPopup(popup).addTo(map.current))
+
+            })
+            setMarker(newMarkers)
+            console.log("Realtime Data added to map!")
+        }
+        /*if (realtime) { // Tempoairly remove Realtime Data, in order to move over to the Unified API endpoint
+            await fetch("/api/gtfs/vehicle/" + agency + "?trip=" + uniqueRoutes)
                 .then((response) => response.json())
                 .then((data) => {
                     console.log("Realtime Data", data)
@@ -248,7 +283,7 @@ export default function Home({ params }) {
                     setMarker(newMarkers)
                     console.log("Realtime Data added to map!")
                 })
-        }
+        }*/
     }
     function mapLoad() { // When the map is loaded, add the sources and layers
 
@@ -256,7 +291,7 @@ export default function Home({ params }) {
         map.current.addSource('all_stops', {
             type: 'geojson',
             // Point to GeoJSON data for stops
-            data: '/api/geo/stops/?agency=' + slug[0],
+            data: '/api/geo/stops/?agency=' + agency,
             cluster: true,
             clusterMaxZoom: 14, // Max zoom to cluster points on
             clusterRadius: 50 // Radius of each cluster when clustering points (defaults to 50)
@@ -389,11 +424,11 @@ export default function Home({ params }) {
     }
 
     function refreshURLParams(window) { // When Back Arrow is used, bring the user back 1 increment in history, and update the Request Object with the new 
-
+        console.log("Refresh")
         window.history.back()    
         const params = window.location.pathname.split("/").filter((x) => x !== "" && x !== "tracker")
 
-        setRequest({ stop: slug[2], type: slug[1], route: slug[2] })
+        setRequest({ stop: slug[1], type: slug[0], route: slug[1] })
 
     }
     function qryrf() {
@@ -407,9 +442,9 @@ export default function Home({ params }) {
     async function getTripInfo(trip, stop) {
         console.log("Loading Trip Info")
 
-        window.history.pushState({ path: "/tracker/" + slug[0] + "/route/" + trip }, '', "/tracker/" + slug[0] + "/route/" + trip)
+        window.history.pushState({ path: "/tracker/" + agency + "/route/" + trip }, '', "/tracker/" + agency + "/route/" + trip)
 
-        const request = await fetch("/api/gtfs/trips/" + slug[0] + "?trip=" + trip + "&stop=" + stop)
+        const request = await fetch("/api/gtfs/trips/" + agency + "?trip=" + trip + "&stop=" + stop)
         const response = await request.json()
         console.log(response)
         if (response.error) {
@@ -484,7 +519,7 @@ export default function Home({ params }) {
         map.current.addSource('context_rt_src', {
             type: 'geojson',
             // Use a URL for the value for the `data` property.
-            data: '/api/geo/shape?agency=' + slug[0] + '&id=' + shape_id
+            data: '/api/geo/shape?agency=' + agency + '&id=' + shape_id
         });
 
         map.current.addLayer({
@@ -596,21 +631,23 @@ export default function Home({ params }) {
                                                         <div key={Math.random()}>
                                                             {(content.type === "stop" || content.type === "arrival") && content.data ? (
                                                                 <a onClick={() => {
-                                                                    setRequest({ stop: x.stop_id, type: "route", route: x.trip_id })
+                                                                    setRequest({ stop: x.stop_id, type: "route", route: x.id })
                                                                     //addRoute(x.shape_id, request.agency)
                                                                 }}>
                                                                     <div className={map_css.arrv_elem}>
                                                                         <div className={map_css.headsign}>
-                                                                            <span className="material-symbols-rounded" style={{ paddingBlock: "1vh" }}>directions_bus</span>
-                                                                            <span className={map_css.route_span}>{x.route}</span>
-                                                                            <p>{x.trip_headsign}</p>
+                                                                            <div>
+                                                                                <span className="material-symbols-rounded" style={{ paddingBlock: "1vh" }}>directions_bus</span>
+                                                                                <span className={map_css.route_span}>{x.trip.route_id}</span>
+                                                                                <p>{x.trip.trip_headsign}</p>
+                                                                            </div>
+                                                                            <p>{x.arrival_time}</p>
                                                                         </div>
                                                                         <br />
                                                                         <p>
-                                                                            {x.attribute + " "}
-                                                                            {x.arrv}
+                                                                            Status: { !x.delay ? "Unavailable" : x.delay?.actual === 0 ? "On Time" : x.delay?.actual > 0 ? "Delayed by " + x.delay?.actual + " minutes" : "Early by " + Math.abs(x.delay?.actual) + " minutes"}
                                                                             <br />
-                                                                            { x.status?.scheduled_diff ? x.status?.scheduled_diff  : null}
+                                                                            Bus: {x.assigned.vehicle ? x.position.id : "Not Assigned"}
                                                                         </p>
                                                                     </div>
                                                                 </a>
@@ -621,8 +658,10 @@ export default function Home({ params }) {
                                                                 }}>
                                                                     <div className={map_css.arrv_elem}>
                                                                         <div className={map_css.headsign}>
-                                                                            <span className="material-symbols-rounded" style={{ paddingBlock: "1vh" }}>room</span>
-                                                                            <span className={map_css.route_span}>{x.stop.code}</span>
+                                                                            <div>
+                                                                                <span className="material-symbols-rounded" style={{ paddingBlock: "1vh" }}>room</span>
+                                                                                <span className={map_css.route_span}>{x.stop.code}</span>
+                                                                            </div>
                                                                             <p>{x.stop.name}</p>
                                                                         </div>
                                                                         <br />
@@ -666,7 +705,7 @@ export default function Home({ params }) {
                                                 <div className={map_css.adv_src}>
                                                     <button onClick={() => {
                                                         setRequest({
-                                                            stop: content.query.stop,
+                                                            stop: slug[1],
                                                             type: "stop",
                                                             time: undefined,
                                                         })

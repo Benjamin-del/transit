@@ -1,6 +1,7 @@
 // Import globals.css
 
 import "../styles/globals.css"
+//import "../styles/trackbar.css"
 import { Nunito } from 'next/font/google'
  
 // If loading a variable font, you don't need to specify the font weight
@@ -14,8 +15,7 @@ export default function RootLayout({ children }) {
     return (
       <html lang="en" className={inter.className}>
         <body>
-          {/* Layout UI */}
-          <main>{children}</main>
+          {children}
         </body>
       </html>
     )

@@ -6,6 +6,7 @@ import { DateTime } from "luxon";
 
 import { PrismaClient } from '@prisma/client/edge'
 const prisma = new PrismaClient()
+import agency from '../../../../../../helpers/agency'
 
 // Using to parse dates and to ensure I don't have to deal with timezones
 const zone = "America/Toronto"
@@ -15,11 +16,11 @@ export async function GET(req) {
     const params = new URL(req.url).searchParams
     const pathname = new URL(req.url).pathname
     const stopid = params.get("stop")
-    const ag = pathname.split("/")[4]
+    const agency_id = pathname.split("/")[4]
 
     const eod = DateTime.now().setZone(zone).endOf('day')
 
-    if (!stopid || !ag) {
+    if (!stopid || !agency_id) {
         console.log("GTFS/SCHEDULE: Missing required parameters")
         return new Response(JSON.stringify({ error: "Missing required parameters" }), {
             status: 400,
@@ -28,7 +29,21 @@ export async function GET(req) {
             },
         });
     }
-    console.log("GTFS/SCHEDULE:" + stopid + " " + ag)
+
+        const agencyInfo = await agency.getAg(agency_id)
+    
+        if (!agencyInfo) {
+            console.log("GTFS/SCHEDULE: Agency not found")
+            return new Response(JSON.stringify({ error: "Agency not found", results: [] }), {
+                status: 400,
+                headers: {
+                    'content-type': 'application/json',
+                },
+            });
+        }
+    
+    
+    console.log("GTFS/SCHEDULE:" + stopid + " " + agency_id)
     const currentDateParam = params.get("date");
     const currentTimeParam = params.get("time");
     const currentDateTime = DateTime.now().setZone(zone);
@@ -49,8 +64,8 @@ export async function GET(req) {
 
 
     // Get all service days, and then filter out the ones that are not in the acceptable days
-    const serviceCalander = await prisma.oc_calendar.findMany()
-    const serviceExceptions = await prisma.oc_calendar_dates.findMany()
+    const serviceCalander = await prisma[agencyInfo.db.calendar].findMany()
+    const serviceExceptions = await prisma[agencyInfo.db.calendar_dates].findMany()
 
     const dayOfWeek = gtfsdt_lx.toFormat("EEEE").toLowerCase()
     const accDays = serviceCalander.filter(x => x[dayOfWeek] === "1" && x.start_date <= gtfsdt && x.end_date >= gtfsdt).map(x => x.service_id)
@@ -61,14 +76,14 @@ export async function GET(req) {
 
     const todaysService = accDays.filter(x => !serviceRemoved.includes(x)).concat(serviceAdded) /* Remove the removed services and add the added services */
 
-    const stopTimes = await prisma.oc_stop_times.findMany({
+    const stopTimes = await prisma[agencyInfo.db.stop_times].findMany({
         where: {
             stop_id: stopid,
         }
     })
     const tripId = stopTimes.map(x => x.trip_id)
 
-    const trips = await prisma.oc_trips.findMany({
+    const trips = await prisma[agencyInfo.db.trips].findMany({
         where: {
             trip_id: {
                 in: tripId
@@ -84,7 +99,7 @@ export async function GET(req) {
         return activeTrips.find(y => y.trip_id === x.trip_id)
     }).map((x) => {
         const trip = trips.find(y => y.trip_id === x.trip_id)
-        return {
+        /*return {
             route: trip.route_id,
             service_id: trip.service_id,
             arrv: x.arrival_time,
@@ -94,10 +109,25 @@ export async function GET(req) {
             dir: trip.direction_id,
             block: trip.block_id,
             shape_id: trip.shape_id.replace("\r", ""),
+        }*/
+
+        return {
+            id: trip.trip_id,
+            assigned: {
+                trip: true,
+                vehicle: false,
+                arrival: true
+            },
+            position: null,
+            schedule_relationship: null,
+            arrival_time: DateTime.fromFormat(x.arrival_time, "HH:mm:ss").toFormat("hh:mm a"),
+            delay: false,
+            sequence: x.stop_sequence,
+            trip: trip
         }
     })
 
-    const stop = await prisma.oc_stops.findUnique({
+    const stop = await prisma[agencyInfo.db.stops].findUnique({
         where: {
             stop_id: stopid
         }
@@ -107,7 +137,7 @@ export async function GET(req) {
             time: gtfshr,
             date: gtfsdt,
             stop: stopid,
-            agency: ag,
+            agency: agency_id,
             service: {
                 added: serviceAdded,
                 removed: serviceRemoved,

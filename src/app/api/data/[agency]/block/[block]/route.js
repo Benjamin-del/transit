@@ -1,13 +1,21 @@
-import agency from "../../../../../helpers/agency";
+import agency from "../../../../../../../helpers/agency";
 import { PrismaClient } from '@prisma/client/edge'
+
+import { DateTime } from "luxon";
 const prisma = new PrismaClient()
 
 export const runtime = "edge"
 
 export async function GET(req) {
     const params = new URL(req.url).searchParams
-    const agencyId = params.get("agency")
-    const blockId = params.get("block")
+    //const agencyId = params.get("agency")
+    //const blockId = params.get("block")
+
+    const pathname = new URL(req.url).pathname
+    const agencyId = pathname.split("/")[3]
+    const blockId = pathname.split("/").pop()
+
+    console.log(agencyId, blockId)
 
     const format = params.get("format") || "json"
 
@@ -70,21 +78,23 @@ export async function GET(req) {
         })[0]
 
         console.log(x.arrival_time)
+
+        const lastStop = lastStops.filter((y) => y.trip_id === x.trip_id)[0];
+
         return {
-            trip_id: x.trip_id,
+            id: x.trip_id,
             route_id: thisTrip.route_id,
             service_id: thisTrip.service_id,
             trip_headsign: thisTrip.trip_headsign,
             direction_id: thisTrip.direction_id,
             block_id: thisTrip.block_id,
+            trip_start: x.arrival_time,
+            trip_end: lastStop ? lastStop.arrival_time : null,
             first_stop: x.stop_id,
-            start_time: x.arrival_time,
-            end_time: (lastStops.filter((y) => {
-                return y.trip_id === x.trip_id
-            })[0].arrival_time)
+            last_stop: lastStop ? lastStop.stop_id  : null,
         }
     }).sort((a, b) => {
-        return Number(a.start_time.replace(/:/g, "")) - Number(b.start_time.replace(/:/g, ""))
+        return Number(a.trip_start.replace(/:/g, "")) - Number(b.trip_start.replace(/:/g, ""))
     })
 
     if (format === "array") {

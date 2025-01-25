@@ -25,8 +25,8 @@ export async function GET(req) {
     const row = params.get("row")
     const format = params.get("format") || "json"
 
-    if (!agencyId || !table || !query /*|| (query.length === 1 && query[0] === "")*/ || !row) {
-        console.log("GTFS/SCHEDULE: Missing required parameters")
+    if (!(agencyId && allTables.includes(table)) &&(!agencyId || !table || !query /*|| (query.length === 1 && query[0] === "")*/ || !row)) {
+        console.log("GTFS/DATA: Missing required parameters")
         return new Response(JSON.stringify({ error: "Missing required parameters", results: [] }), {
             status: 400,
             headers: {
@@ -39,7 +39,7 @@ export async function GET(req) {
     const agencyInfo = await agency.getAg(agencyId)
 
     if (!agencyInfo) {
-        console.log("GTFS/SCHEDULE: Agency not found")
+        console.log("GTFS/DATA: Agency not found")
         return new Response(JSON.stringify({ error: "Agency not found", results: [] }), {
             status: 400,
             headers: {
@@ -51,7 +51,7 @@ export async function GET(req) {
     // Check if table is valid
 
     if (!agencyInfo.db[table]) {
-        console.log("GTFS/SCHEDULE: Table not found")
+        console.log("GTFS/DATA: Table not found")
         return new Response(JSON.stringify({ error: "Table not found", results: [] }), {
             status: 400,
             headers: {

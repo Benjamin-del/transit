@@ -20,8 +20,9 @@ export default function Page({ params }) {
     const [data, setData] = useState(null);
     //const [loading, setLoading] = useState(true);  
 
+    const { agency, trip_id } = React.use(params)
     useEffect(() => {
-        fetch(`/api/data/${params.agency}/stop_times?search=${params.trip_id}&row=trip_id`)
+        fetch(`/api/data/${agency}/stop_times?search=${trip_id}&row=trip_id`)
             .then((res) => res.json())
             .then((data) => {
                 setData(data);

@@ -19,9 +19,10 @@ export default function Page({ params }) {
 
     const [data, setData] = useState(null);
     //const [loading, setLoading] = useState(true);  
+    const { agency } = React.use(params)
 
     useEffect(() => {
-        fetch(`/api/data/${params.agency}/routes?search=&row=null`)
+        fetch(`/api/data/${agency}/routes?search=&row=null`)
             .then((res) => res.json())
             .then((data) => {
                 setData(data);
@@ -58,7 +59,7 @@ export default function Page({ params }) {
                                         </Typography>
                                     </CardContent>
                                     <CardActions>
-                                        <Button size="small">View</Button>
+                                        <Button size="small" href={`${agency}/routes/${route.route_id}`}>View</Button>
                                     </CardActions>
                                 </Card>
                             </Grid>
