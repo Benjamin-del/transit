@@ -105,7 +105,7 @@ export async function GET(req) {
             geo: true,
             longitude: x.lon,
             latitude: x.lat,
-            time: DateTime.fromSeconds(Number(x.timestamp), { zone: "America/Toronto" }).toFormat("HH:mm:ss"),
+            time: DateTime.fromSeconds(Number(x.timestamp), { zone: agencyInfo.timezone }).toFormat("HH:mm:ss"),
             info: {
                 status: x.status,
                 stop: x.stop_id,

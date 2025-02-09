@@ -99,9 +99,9 @@ export async function GET(req) {
             if (!thisArrival || !x.arrival_time) {
                 return null
             }
-            console.log(typeof x.arrival_time)
-            const scheduledTime = DateTime.fromFormat(thisArrival.arrival_time, "HH:mm:ss")
-            const actualTime = DateTime.fromSeconds(x.arrival_time)
+            //console.log(typeof x.arrival_time)
+            const scheduledTime = DateTime.fromFormat(thisArrival.arrival_time, "HH:mm:ss").setZone(agencyInfo.timezone, { keepLocalTime: true })
+            const actualTime = DateTime.fromSeconds(x.arrival_time).setZone(agencyInfo.timezone/*, { keepLocalTime: true }*/);
 
             return {
                 estimated: x.delay,
@@ -123,7 +123,7 @@ export async function GET(req) {
                 id: thisVehicle.vehicle_id,
             } : null, 
             schedule_relationship: x.schedule_relationship, // GTFS-RT Schedule Relationship, currenty not used, but will be in place for update.
-            arrival_time: x.arrival_time ? DateTime.fromSeconds(x.arrival_time).toFormat("hh:mm a") : null, // Real Time Arrival Time
+            arrival_time: x.arrival_time ? DateTime.fromSeconds(x.arrival_time).setZone(agencyInfo.timezone).toFormat("hh:mm a") : null, // Real Time Arrival Time
             //attribute: "Scheduled", // Attribute is used to determine the status of the trip, working on removing this
             delay: delay, // Delay in minutes, if the trip is delayed. If Arrival Time is not found, delay is null. 
             sequence: x.sequence, // Order of stop in the trip
@@ -133,14 +133,15 @@ export async function GET(req) {
     }
     )
 
+    console.log("tz", agencyInfo.timezone)
 
     return new Response(JSON.stringify({
         query: { // Query Information. 
-            stop: stop
+            stop: stop,
+            agTz: agencyInfo.timezone // Agency Timezone
         }, 
         stop: stopInfo, // Send Stop Information, for reference
-        arrivals: stopArrivals
-
+        arrivals: stopArrivals,
     }), {
         status: 200,
         headers: {

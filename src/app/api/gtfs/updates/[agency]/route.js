@@ -105,11 +105,11 @@ export async function GET(req) {
             return y.trip_id === x.trip_id
         })[0] // Get the trip info
 
-        const arrvTime = DateTime.fromSeconds(Number(x.arrival_time)).setZone("America/Toronto")
+        const arrvTime = DateTime.fromSeconds(Number(x.arrival_time)).setZone(agencyInfo.timezone)
 
         const refStTime = stTimes.filter(y => y.trip_id === x.trip_id)[0]
 
-        const refStTimeObj = refStTime ? DateTime.fromFormat(refStTime.arrival_time, "HH:mm:ss").setZone("America/Toronto", { keepLocalTime: true}) : null
+        const refStTimeObj = refStTime ? DateTime.fromFormat(refStTime.arrival_time, "HH:mm:ss").setZone(agencyInfo.timezone, { keepLocalTime: true}) : null
 
         const arrvStDiff = Math.round(refStTimeObj.diff(arrvTime, "minutes").toObject().minutes)
         const arrvStDiffStr = arrvStDiff < 0 ? (Math.abs(arrvStDiff) + " minutes late") : arrvStDiff > 0 ? (Math.abs(arrvStDiff) + " minutes early") : "On time"

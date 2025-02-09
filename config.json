@@ -5,6 +5,7 @@
             "name": "OC Transpo (BETA)",
             "rt": true,
             "st": true,
+            "timezone": "America/New_York",
             "files": [
                 {
                     "id":"js-pos",

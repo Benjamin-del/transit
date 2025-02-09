@@ -9,7 +9,7 @@ const prisma = new PrismaClient()
 import agency from '../../../../../../helpers/agency'
 
 // Using to parse dates and to ensure I don't have to deal with timezones
-const zone = "America/Toronto"
+//const zone = "America/Toronto"
 export const runtime = "edge"
 
 export async function GET(req) {
@@ -18,7 +18,7 @@ export async function GET(req) {
     const stopid = params.get("stop")
     const agency_id = pathname.split("/")[4]
 
-    const eod = DateTime.now().setZone(zone).endOf('day')
+    const eod = DateTime.now().setZone(agencyInfo.timezone).endOf('day')
 
     if (!stopid || !agency_id) {
         console.log("GTFS/SCHEDULE: Missing required parameters")
@@ -46,10 +46,10 @@ export async function GET(req) {
     console.log("GTFS/SCHEDULE:" + stopid + " " + agency_id)
     const currentDateParam = params.get("date");
     const currentTimeParam = params.get("time");
-    const currentDateTime = DateTime.now().setZone(zone);
+    const currentDateTime = DateTime.now().setZone(agencyInfo.timezone);
 
     const gtfsdt_lx = currentDateParam && currentDateParam !== "undefined"
-        ? DateTime.fromFormat(currentDateParam, 'yyyyMMdd').setZone(zone).startOf('day')
+        ? DateTime.fromFormat(currentDateParam, 'yyyyMMdd').setZone(agencyInfo.timezone).startOf('day')
         : currentDateTime.startOf('day');
     const gtfsdt = Number(gtfsdt_lx.toFormat('yyyyMMdd'));
 

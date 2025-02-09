@@ -54,7 +54,7 @@ export async function GET(req) {
             }
         }
     })
-    const now = Number(DateTime.now().setZone("America/Toronto").toFormat("HHmmss"))
+    const now = Number(DateTime.now().setZone(agencyInfo.timezone).toFormat("HHmmss"))
 
     const ftldtms = times.map((x) => {
         const stop = stops.filter((y) => {
